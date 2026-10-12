@@ -12,9 +12,25 @@ from dataclasses import dataclass
 from pathlib import Path
 
 #: Market segments kept when filtering for passenger flights.
+#:
+#: The dataset spans two EUROCONTROL labelling eras, so both are included:
+#: post-2022 exports use "Mainline", "Regional Aircraft" and "Lowcost", while the
+#: 2020-2021 exports use "Traditional Scheduled" and "Lowcost" (with regional
+#: traffic folded into "Traditional Scheduled"). "Regional" and "Low-Cost" are
+#: kept as the spellings used in the issue text / other exports.
+#:
+#: "Not Classified" is also included: some exports carry no STATFOR segment at
+#: all (e.g. 202403 is entirely "Not Classified"), and issue #2's own CLI example
+#: uses that period. These rows are still filtered to ICAO type S.
 DEFAULT_MARKET_SEGMENTS: tuple[str, ...] = (
-    "Traditional Scheduled",
+    "Mainline",
+    "Regional",
+    "Regional Aircraft",
+    "Low-Cost",
     "Lowcost",
+    "Charter",
+    "Traditional Scheduled",
+    "Not Classified",
 )
 
 #: ICAO flight type marking a scheduled/passenger flight.
