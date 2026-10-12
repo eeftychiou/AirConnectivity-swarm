@@ -15,8 +15,9 @@ written and no data is committed to the repository.
 ## Screenshots
 
 The report below was generated from a real two-period run
-(`--periods 202403 202404 --window M --weight seats --top-n 25`, one page per
-period). See [`docs/usage.md`](docs/usage.md) for the exact commands.
+(`airconn report --periods 202403 202404 --window M --weight seats --top-n 25`):
+a single page with a period selector over both months. See
+[`docs/usage.md`](docs/usage.md) for the exact commands.
 
 | | |
 | --- | --- |
@@ -24,7 +25,7 @@ period). See [`docs/usage.md`](docs/usage.md) for the exact commands.
 | ![Full report](docs/img/01_report_full.png) | ![Static vs temporal](docs/img/02_static_vs_temporal.png) |
 | **Rank change between months** (dumbbell) | **One airport's PageRank over time** (daily windows) |
 | ![Rank change](docs/img/03_rank_change.png) | ![Time series](docs/img/04_time_series.png) |
-| **Airport map** sized by PageRank, with a hover tooltip | **CLI summary and Markdown report excerpt** |
+| **Airport map** sized by PageRank, with the hover details shown for the top airport | **CLI summary and Markdown report excerpt** |
 | ![Airport map](docs/img/05_airport_map.png) | ![CLI and report](docs/img/06_cli_and_report.png) |
 
 ## Install

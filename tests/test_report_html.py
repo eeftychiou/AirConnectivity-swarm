@@ -103,6 +103,27 @@ def test_chart_map_uses_airport_name_lookup() -> None:
     assert "Heathrow" in data["name"][0]
 
 
+def test_chart_map_annotates_the_top_airport() -> None:
+    from airconnectivity.report_html import _bokeh, _chart_map
+
+    fig, _ = _chart_map(
+        _bokeh(),
+        {("202403", "temporal"): {"EGLL": 0.9, "LFPG": 0.5}},
+        ["202403"],
+        "temporal",
+        25,
+        {"EGLL": (51.47, -0.46), "LFPG": (49.0, 2.55)},
+    )
+    texts: list[str] = []
+    for collection in (fig.renderers, fig.center, fig.left, fig.right, fig.above, fig.below):
+        for item in collection:
+            text = getattr(item, "text", None)
+            if isinstance(text, str):
+                texts.append(text)
+    joined = " ".join(texts)
+    assert "EGLL" in joined and "Heathrow" in joined and "score" in joined and "rank" in joined
+
+
 def test_chart_map_unknown_name_shows_icao_with_note() -> None:
     from airconnectivity.report_html import _bokeh, _chart_map
 

@@ -40,7 +40,9 @@ FULL_PAGE_FILE = "01_report_full.png"
 CLI_FILE = "06_cli_and_report.png"
 
 _SIZE_LIMIT = 500 * 1024
-_VIEWPORT = {"width": 760, "height": 1000}
+#: Tall enough that the whole report fits without scrolling, so the mouse can
+#: reach the map chart and screenshot clip coordinates match the page.
+_VIEWPORT = {"width": 760, "height": 2800}
 
 
 def _shrink(path: Path, limit: int = _SIZE_LIMIT) -> None:
@@ -56,16 +58,28 @@ def _shrink(path: Path, limit: int = _SIZE_LIMIT) -> None:
         scale -= 0.1
 
 
-def _hover_a_point(page, figure) -> None:
-    """Hover a glyph until a non-empty bokeh tooltip appears (for the map chart)."""
+def _hover_a_point(page, figure) -> bool:
+    """Try to hover a plotted glyph until a non-empty bokeh tooltip shows.
+
+    Returns whether a tooltip appeared. Headless browsers do not always dispatch
+    the pointer events bokeh's hover needs, so this is best-effort: the map
+    chart also annotates its top airport, and the caller falls back to a plain
+    figure screenshot when no tooltip is available.
+    """
     box = figure.bounding_box()
-    tooltip = page.locator(".bk-Tooltip").first
-    for i in range(1, 16):
-        for j in range(1, 16):
-            page.mouse.move(box["x"] + box["width"] * i / 16, box["y"] + box["height"] * j / 16)
-            page.wait_for_timeout(70)
-            if tooltip.count() and tooltip.is_visible() and tooltip.inner_text().strip():
-                return
+    tooltip = page.locator("div.bk-Tooltip")
+    step = 18
+    y = box["y"] + 6
+    while y < box["y"] + box["height"]:
+        x = box["x"] + 6
+        while x < box["x"] + box["width"]:
+            page.mouse.move(x, y)
+            page.wait_for_timeout(15)
+            if tooltip.count() and tooltip.first.is_visible() and tooltip.first.inner_text().strip():
+                return True
+            x += step
+        y += step
+    return False
 
 
 def _cli_html(load_files: list[Path], markdown: Path) -> str:
@@ -107,16 +121,18 @@ def make_screenshots(report: Path, out_dir: Path, load_files: list[Path], markdo
             figure.scroll_into_view_if_needed()
             page.wait_for_timeout(300)
             target = out_dir / name
-            if name == "05_airport_map.png":  # hover a point so the tooltip shows
-                _hover_a_point(page, figure)
-                box = figure.bounding_box()
-                clip = {
-                    "x": max(0, box["x"] - 10),
-                    "y": max(0, box["y"] - 10),
-                    "width": min(box["width"] + 30, _VIEWPORT["width"]),
-                    "height": box["height"] + 120,  # room for a tooltip below the cursor
-                }
-                page.screenshot(path=str(target), clip=clip)
+            if name == "05_airport_map.png":  # try to show a hover tooltip
+                if _hover_a_point(page, figure):
+                    box = figure.bounding_box()
+                    tip = page.locator("div.bk-Tooltip").first.bounding_box()
+                    left = min(box["x"], tip["x"]) - 10
+                    top = min(box["y"], tip["y"]) - 10
+                    right = max(box["x"] + box["width"], tip["x"] + tip["width"]) + 10
+                    bottom = max(box["y"] + box["height"], tip["y"] + tip["height"]) + 10
+                    clip = {"x": max(0, left), "y": max(0, top), "width": right - left, "height": bottom - top}
+                    page.screenshot(path=str(target), clip=clip)
+                else:  # no hover in this browser: the top airport is annotated anyway
+                    figure.screenshot(path=str(target))
             else:
                 figure.screenshot(path=str(target))
             written.append(target)

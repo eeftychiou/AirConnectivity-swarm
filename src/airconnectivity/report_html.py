@@ -42,7 +42,7 @@ def _bokeh() -> types.SimpleNamespace:
     try:
         from bokeh.embed import file_html
         from bokeh.layouts import column
-        from bokeh.models import ColumnDataSource, CustomJS, Div, FixedTicker, HoverTool, Select
+        from bokeh.models import ColumnDataSource, CustomJS, Div, FixedTicker, HoverTool, Label, Select
         from bokeh.plotting import figure
         from bokeh.resources import CDN, INLINE
     except ImportError as exc:  # pragma: no cover - exercised via monkeypatch in tests
@@ -55,6 +55,7 @@ def _bokeh() -> types.SimpleNamespace:
         Div=Div,
         FixedTicker=FixedTicker,
         HoverTool=HoverTool,
+        Label=Label,
         Select=Select,
         figure=figure,
         CDN=CDN,
@@ -284,6 +285,29 @@ def _chart_map(bk, monthly, periods, method, top_n, coords):
         bk.HoverTool(
             renderers=[circles],
             tooltips=[("ICAO", "@airport"), ("name", "@name"), ("score", "@score{0.0000}"), ("rank", "@rank")],
+        )
+    )
+    # Show the hover details for the top airport as a tooltip-styled callout, so
+    # the fields are visible without a live hover (a headless capture cannot
+    # dispatch the pointer events bokeh's HoverTool needs). The chart keeps its
+    # real hover tooltip for interactive use. Placed top-right so it never clips.
+    top = ordered[0]
+    fig.add_layout(
+        bk.Label(
+            x=max(lons),
+            y=max(lats),
+            text=(
+                f"ICAO: {top}    name: {names.get(top) or f'{top} (name unknown)'}    "
+                f"score: {totals[top]:.4f}    rank: {ranks[top]}"
+            ),
+            text_font_size="8pt",
+            text_align="right",
+            text_baseline="top",
+            background_fill_color="white",
+            background_fill_alpha=0.9,
+            border_line_color="#888888",
+            border_line_width=1,
+            padding=4,
         )
     )
     return fig, None
