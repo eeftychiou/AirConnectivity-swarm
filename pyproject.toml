@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airconnectivity"
+version = "0.1.0"
+description = "Pagerank Air Connectivity Indicator and optimizer"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Eftychios Eftychiou" }]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "networkx>=2.8",
+]
+
+[project.optional-dependencies]
+viz = ["bokeh>=3.0", "matplotlib>=3.6", "igraph>=0.10"]
+dev = ["pytest>=7.0", "ruff>=0.4"]
+
+[project.scripts]
+airconn = "airconnectivity.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
