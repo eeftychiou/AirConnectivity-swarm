@@ -9,6 +9,8 @@ The package installs an `airconn` CLI that loads the gzipped EUROCONTROL
 exports in place, builds per-window graphs, ranks airports and writes CSV,
 Markdown and interactive HTML reports.
 
+> **Built by an agent swarm.** This repository is a proof of concept for [Swarmly](https://github.com/eeftychiou/swarmly): AI coding agents (Claude Code, OpenAI Codex CLI, Antigravity and a DeepSeek agent) worked through its issues and pull requests, coordinating through Swarmly, with a human maintainer in charge. It rebuilds and extends the author's earlier [AirConnectivity](https://github.com/eeftychiou/AirConnectivity) indicator (2021).
+
 All outputs are **aggregated airport-level results**; raw flight rows are never
 written and no data is committed to the repository.
 
@@ -17,7 +19,7 @@ written and no data is committed to the repository.
 The report below was generated from a real two-period run:
 
 ```bash
-DATA="G:/My Drive/PRC Data Challenge"
+DATA="/path/to/eurocontrol-rnd-data"
 airconn rank --data-root "$DATA" --periods 202403,202404 \
     --window M --weight seats --method both --out outputs
 airconn report --data-root "$DATA" --rankings outputs --periods 202403 202404 \
@@ -75,7 +77,7 @@ else. Data can be downloaded from the
 ## Quickstart
 
 ```bash
-DATA="G:/My Drive/PRC Data Challenge"
+DATA="/path/to/eurocontrol-rnd-data"
 
 # 1. Load a period and print aggregate counts (no row-level data).
 airconn load --data-root "$DATA" --period 202403 --summary
