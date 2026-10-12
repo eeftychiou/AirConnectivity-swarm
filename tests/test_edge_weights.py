@@ -13,6 +13,7 @@ from airconnectivity.weights import (
     add_edge_weights,
     aggregate_edges,
     flight_distance_km,
+    infer_category,
     load_seats_table,
     seats_for_types,
 )
@@ -74,6 +75,38 @@ def test_seats_lookup_covers_common_types() -> None:
         assert designator in table
     assert table["A320"][0] == 180
     assert table["B77W"][1] == "widebody"
+
+
+def test_unknown_types_use_per_category_default(caplog: pytest.LogCaptureFixture) -> None:
+    # B77L (Boeing 777) is a widebody, E145 (Embraer ERJ) a regional jet.
+    types = pd.Series(["B77L", "B77L", "E145"])
+
+    with caplog.at_level(logging.WARNING, logger="airconnectivity.weights"):
+        seats, unknown = seats_for_types(types)
+
+    assert seats.tolist() == [300, 300, 100]
+    assert unknown == ["B77L", "E145"]
+    # The warning reports affected flights (3), not just distinct designators (2).
+    assert "on 3 flights" in caplog.text
+    assert "(2 distinct)" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("designator", "category"),
+    [
+        ("B77L", "widebody"),
+        ("A359", "widebody"),
+        ("E145", "regional_jet"),
+        ("CRJ9", "regional_jet"),
+        ("AT7X", "turboprop"),
+    ],
+)
+def test_infer_category_families(designator: str, category: str) -> None:
+    assert infer_category(designator) == category
+
+
+def test_infer_category_returns_none_for_unknown_family() -> None:
+    assert infer_category("ZZZZ") is None
 
 
 def test_unknown_type_falls_back_and_is_counted_and_logged(

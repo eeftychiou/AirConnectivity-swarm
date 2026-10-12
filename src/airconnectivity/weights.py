@@ -32,16 +32,55 @@ WEIGHT_MODES: tuple[str, ...] = ("frequency", "unweighted", "distance", "seats")
 #: Distance source for the ``distance`` mode.
 DISTANCE_SOURCES: tuple[str, ...] = ("gcd", "actual")
 
-#: Fallback seat count for an unknown ICAO type designator (a typical narrow-body).
+#: Fallback seat count used when a designator's category cannot be inferred.
 DEFAULT_SEATS = 150
 
-#: Per-category fallback seat counts, used when a known type has no seat value.
+#: Per-category fallback seat counts for designators not in the lookup table.
 CATEGORY_DEFAULTS: dict[str, int] = {
     "narrowbody": 180,
     "widebody": 300,
     "regional_jet": 100,
     "turboprop": 70,
 }
+
+#: Manufacturer/model families used to infer a category for an unknown
+#: designator, checked in order (specific families first). Lets an off-table type
+#: like ``B77L`` (widebody) or ``E145`` (regional jet) fall back to the right
+#: category default instead of one global value.
+CATEGORY_PREFIXES: tuple[tuple[tuple[str, ...], str], ...] = (
+    # Airbus
+    (("A318", "A319", "A320", "A321", "A19N", "A20N", "A21N", "A220", "BCS1", "BCS3"), "narrowbody"),
+    (
+        (
+            "A300", "A310", "A330", "A331", "A332", "A333", "A337", "A338", "A339",
+            "A340", "A342", "A343", "A345", "A346", "A350", "A358", "A359", "A35K",
+            "A380", "A388",
+        ),
+        "widebody",
+    ),
+    # Boeing
+    (
+        (
+            "B731", "B732", "B733", "B734", "B735", "B736", "B737", "B738", "B739",
+            "B37M", "B38M", "B39M", "B752", "B753",
+        ),
+        "narrowbody",
+    ),
+    (
+        (
+            "B741", "B742", "B743", "B744", "B748", "B74", "B762", "B763", "B764",
+            "B76", "B772", "B773", "B77", "B788", "B789", "B78",
+        ),
+        "widebody",
+    ),
+    # Regional jets (Embraer, Bombardier, Fokker)
+    (
+        ("E13", "E14", "E17", "E19", "E29", "E75", "E190", "E195", "CRJ", "RJ", "F70", "F10", "B717", "B71"),
+        "regional_jet",
+    ),
+    # Turboprops
+    (("AT", "DH", "DHC", "SB", "JS", "BE", "E110"), "turboprop"),
+)
 
 _SEATS_RESOURCE = ("airconnectivity", "data/ac_type_seats.csv")
 
@@ -59,18 +98,31 @@ def load_seats_table() -> dict[str, tuple[int | None, str]]:
     }
 
 
+def infer_category(designator: str) -> str | None:
+    """Infer an aircraft category from a designator's manufacturer/model family."""
+    code = designator.strip().upper()
+    for prefixes, category in CATEGORY_PREFIXES:
+        if code.startswith(prefixes):
+            return category
+    return None
+
+
 def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
     """Estimate seats per flight from ICAO type designators.
 
-    Returns the seat counts and the sorted list of unknown designators. Unknown
-    types fall back to :data:`DEFAULT_SEATS` and are logged; an empty designator
-    is treated as unknown without logging.
+    Returns the seat counts and the sorted list of unknown designators. A
+    designator missing from the lookup falls back to its inferred
+    :data:`CATEGORY_DEFAULTS` value, or :data:`DEFAULT_SEATS` when no category can
+    be inferred. Unknown types are logged with the number of affected flights
+    (not just distinct designators). An empty designator uses
+    :data:`DEFAULT_SEATS` without being logged.
     """
     table = load_seats_table()
     normalized = ac_types.astype("string").str.strip().str.upper()
 
     resolved: list[int] = []
     unknown: set[str] = set()
+    unknown_flights = 0
     for value in normalized:
         if value is None or pd.isna(value) or value == "":
             resolved.append(DEFAULT_SEATS)
@@ -80,13 +132,15 @@ def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
             resolved.append(CATEGORY_DEFAULTS.get(category, DEFAULT_SEATS) if seats is None else int(seats))
         else:
             unknown.add(str(value))
-            resolved.append(DEFAULT_SEATS)
+            unknown_flights += 1
+            inferred = infer_category(str(value))
+            resolved.append(CATEGORY_DEFAULTS.get(inferred, DEFAULT_SEATS) if inferred else DEFAULT_SEATS)
 
     if unknown:
         logger.warning(
-            "Unknown ICAO aircraft types (%d) defaulted to %d seats: %s",
+            "Unknown ICAO aircraft types on %d flights (%d distinct) resolved via category defaults: %s",
+            unknown_flights,
             len(unknown),
-            DEFAULT_SEATS,
             ", ".join(sorted(unknown)),
         )
 
