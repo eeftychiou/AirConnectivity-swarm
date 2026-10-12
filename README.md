@@ -14,9 +14,16 @@ written and no data is committed to the repository.
 
 ## Screenshots
 
-The report below was generated from a real two-period run — rankings from
-`airconn rank --periods 202403,202404 --window M --weight seats`, then
-`airconn report --periods 202403 202404 --html report.html --inline --top-n 25`.
+The report below was generated from a real two-period run:
+
+```bash
+DATA="G:/My Drive/PRC Data Challenge"
+airconn rank --data-root "$DATA" --periods 202403,202404 \
+    --window M --weight seats --method both --out outputs
+airconn report --data-root "$DATA" --rankings outputs --periods 202403 202404 \
+    --html outputs/report.html --inline --top-n 25
+```
+
 It is a single page with a period selector over both months. See
 [`docs/usage.md`](docs/usage.md) for the exact commands.
 
