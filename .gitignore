@@ -1,9 +1,9 @@
-# Data (never commit)
-*.csv
+# Data (never commit). Anchored to the repo root so the packaged lookup at
+# src/airconnectivity/data/ac_type_seats.csv stays tracked.
 *.csv.gz
 *.zip
-data/
-outputs/
+/data/
+/outputs/
 
 # Python
 __pycache__/
