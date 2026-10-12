@@ -82,6 +82,40 @@ def data_root(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def test_default_filter_keeps_historical_and_unclassified_labels(tmp_path: Path) -> None:
+    rows = [
+        _row(market="Traditional Scheduled"),
+        _row(market="Lowcost"),
+        _row(market="Regional Aircraft"),
+        _row(market="Not Classified"),
+        _row(market="All-Cargo"),  # still excluded
+        _row(market="Business Aviation"),  # still excluded
+    ]
+    _write_fixture(tmp_path, "202003", rows)
+
+    df = load_flights(tmp_path, periods=["202003"])
+
+    assert set(df["statfor_market_segment"]) == {
+        "Traditional Scheduled",
+        "Lowcost",
+        "Regional Aircraft",
+        "Not Classified",
+    }
+
+
+def test_load_flights_handles_nested_period_layout(tmp_path: Path) -> None:
+    # Some exports nest the archive: <root>/202403/202403/Flights_*.csv.gz
+    nested = tmp_path / "202403" / "202403"
+    nested.mkdir(parents=True)
+    path = nested / "Flights_20240301_20240331.csv.gz"
+    with gzip.open(path, "wt", newline="\n") as handle:
+        handle.write(HEADER_LINE + "\n")
+        handle.write(",".join(_row()) + "\n")
+
+    assert discover_periods(tmp_path) == ["202403"]
+    assert len(load_flights(tmp_path, periods=["202403"])) == 1
+
+
 def test_discover_periods_lists_numeric_folders_and_skips_others(data_root: Path) -> None:
     for name in ("candidates", "shared", "submissions"):
         (data_root / name).mkdir()

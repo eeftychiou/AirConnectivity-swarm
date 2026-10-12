@@ -42,21 +42,29 @@ def _load_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _add_data_root(parser: argparse.ArgumentParser, default: str) -> None:
+    """Register ``--data-root`` on a parser (root or subcommand)."""
+    parser.add_argument(
+        "--data-root",
+        default=default,
+        help=f"root folder holding <YYYYMM>/ data folders (env {_ENV_DATA_ROOT})",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="airconn",
         description="Pagerank air connectivity indicator and optimizer.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument(
-        "--data-root",
-        default=_default_data_root(),
-        help=f"root folder holding <YYYYMM>/ data folders (env {_ENV_DATA_ROOT})",
-    )
+    _add_data_root(parser, _default_data_root())
 
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     load = subparsers.add_parser("load", help="load flights for a period and print a summary")
+    # Allow --data-root after the subcommand too, as documented in the issue.
+    # SUPPRESS keeps the root parser's value when the flag is not given here.
+    _add_data_root(load, argparse.SUPPRESS)
     load.add_argument(
         "--period",
         action="append",
@@ -67,10 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
     load.set_defaults(func=_load_command)
 
     rank = subparsers.add_parser("rank", help="rank airports for one or more periods")
+    _add_data_root(rank, argparse.SUPPRESS)
     rank.add_argument("--period", action="append", dest="periods", help="period folder; repeatable")
     rank.set_defaults(func=_cmd_rank)
 
     report = subparsers.add_parser("report", help="compare airport rankings across periods")
+    _add_data_root(report, argparse.SUPPRESS)
     report.add_argument("--period", action="append", dest="periods", help="period folder; repeatable")
     report.set_defaults(func=_cmd_report)
 

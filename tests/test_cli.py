@@ -42,8 +42,18 @@ def test_data_root_env_is_used(monkeypatch: pytest.MonkeyPatch) -> None:
     assert args.data_root == "/tmp/somewhere"
 
 
-def test_data_root_flag_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AIRCONN_DATA_ROOT", "/tmp/somewhere")
-    parser = cli.build_parser()
-    args = parser.parse_args(["--data-root", "/tmp/explicit", "load"])
-    assert args.data_root == "/tmp/explicit"
+def test_data_root_flag_after_subcommand_is_accepted(capsys: pytest.CaptureFixture[str]) -> None:
+    # Issue #2 documents `airconn load --data-root PATH ...`.
+    assert cli.main(["load", "--data-root", "does-not-exist"]) == 0
+    assert "rows: 0" in capsys.readouterr().out
+
+
+def test_subcommand_data_root_overrides_global(capsys: pytest.CaptureFixture[str]) -> None:
+    args = cli.build_parser().parse_args(["--data-root", "/tmp/global", "load", "--data-root", "/tmp/sub"])
+    assert args.data_root == "/tmp/sub"
+
+
+def test_global_data_root_still_works_when_not_repeated() -> None:
+    args = cli.build_parser().parse_args(["--data-root", "/tmp/global", "load"])
+    assert args.data_root == "/tmp/global"
+    assert cli.build_parser().parse_args(["load"]).data_root is not None

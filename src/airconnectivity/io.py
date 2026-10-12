@@ -179,8 +179,12 @@ def discover_periods(root: str | Path) -> list[str]:
 
 
 def _period_files(root: Path, period: str) -> list[Path]:
-    """The ``Flights_*.csv.gz`` files for one period, sorted."""
-    return sorted((root / period).glob("Flights_*.csv.gz"))
+    """The ``Flights_*.csv.gz`` files for one period, sorted.
+
+    Uses ``rglob`` because some exports nest the archive one level deeper
+    (``<root>/202403/202403/Flights_*.csv.gz``).
+    """
+    return sorted((root / period).rglob("Flights_*.csv.gz"))
 
 
 def _read_period_file(path: Path, chunksize: int) -> pd.DataFrame:
