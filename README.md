@@ -76,6 +76,18 @@ for the flown distance); `seats` uses the committed
 `src/airconnectivity/data/ac_type_seats.csv` lookup (ICAO type -> typical seats),
 falling back to 150 seats for unknown types, which are counted and logged.
 
+Flights are bucketed into daily, ISO-weekly or monthly windows (UTC) and turned
+into directed graphs; `window_metrics` returns a per-window airport table
+(pagerank, in/out degree, strength):
+
+```python
+from airconnectivity.graphs import window_metrics, windows
+
+for window_start, graph in windows(df, freq="W", weight="seats"):
+    ...
+metrics = window_metrics(df, freq="D")
+```
+
 ## Development
 
 ```bash
@@ -94,6 +106,7 @@ src/airconnectivity/
   geo.py       great-circle distance and flight-time estimates
   io.py        period discovery + EUROCONTROL flight-file loaders
   weights.py   edge weighting schemes
+  graphs.py    time-windowed graphs and static weighted PageRank
   cli.py       the `airconn` command-line entry point
 tests/         pytest suite (small synthetic fixtures only)
 ```
