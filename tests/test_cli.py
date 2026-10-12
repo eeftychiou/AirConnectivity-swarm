@@ -18,10 +18,13 @@ def test_help_exits_zero(capsys: pytest.CaptureFixture[str]) -> None:
     assert "report" in out
 
 
-def test_rank_and_report_are_stubbed(capsys: pytest.CaptureFixture[str]) -> None:
-    for command in ("rank", "report"):
-        assert cli.main([command]) == 0
-        assert "not implemented yet" in capsys.readouterr().out
+def test_rank_and_report_run(capsys: pytest.CaptureFixture[str], tmp_path) -> None:
+    # rank with an empty data root discovers no periods and writes nothing.
+    assert cli.main(["rank", "--data-root", str(tmp_path / "data"), "--out", str(tmp_path / "out")]) == 0
+    # report over an empty rankings directory writes an empty report.
+    report_path = tmp_path / "out" / "report.md"
+    assert cli.main(["report", "--rankings", str(tmp_path / "out"), "--out", str(report_path)]) == 0
+    assert report_path.exists()
 
 
 def test_load_without_data_returns_zero_rows(capsys: pytest.CaptureFixture[str]) -> None:
