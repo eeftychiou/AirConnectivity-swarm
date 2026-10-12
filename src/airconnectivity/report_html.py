@@ -268,7 +268,7 @@ def _chart_map(bk, monthly, periods, method, top_n, coords):
     source = bk.ColumnDataSource(
         {
             "airport": airports,
-            "name": [names.get(airport, "") for airport in airports],
+            "name": [names.get(airport) or f"{airport} (name unknown)" for airport in airports],
             "lat": lats,
             "lon": lons,
             "score": scores,

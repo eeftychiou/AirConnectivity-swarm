@@ -100,17 +100,27 @@ def test_chart_map_uses_airport_name_lookup() -> None:
     )
     data = [r for r in fig.renderers if hasattr(r, "data_source") and "name" in r.data_source.data][0].data_source.data
     assert data["airport"] == ["EGLL"]
-    assert data["name"] == ["London Heathrow"]
+    assert "Heathrow" in data["name"][0]
 
 
-def test_chart_map_unknown_name_is_blank() -> None:
+def test_chart_map_unknown_name_shows_icao_with_note() -> None:
     from airconnectivity.report_html import _bokeh, _chart_map
 
     fig, _ = _chart_map(
         _bokeh(), {("202403", "temporal"): {"ZZZZ": 0.9}}, ["202403"], "temporal", 25, {"ZZZZ": (0.0, 0.0)}
     )
     data = [r for r in fig.renderers if hasattr(r, "data_source") and "name" in r.data_source.data][0].data_source.data
-    assert data["name"] == [""]
+    assert data["name"] == ["ZZZZ (name unknown)"]
+
+
+def test_airport_names_data_notes_its_source() -> None:
+    from importlib import resources
+
+    path = resources.files("airconnectivity").joinpath("data/airport_names.csv")
+    with resources.as_file(path) as file_path:
+        text = file_path.read_text(encoding="utf-8")
+    assert "OurAirports" in text
+    assert "public domain" in text
 
 
 def test_airport_names_cover_common_airports_beyond_top_25() -> None:
