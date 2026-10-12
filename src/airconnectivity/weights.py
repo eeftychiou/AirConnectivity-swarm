@@ -36,12 +36,18 @@ DISTANCE_SOURCES: tuple[str, ...] = ("gcd", "actual")
 DEFAULT_SEATS = 150
 
 #: Per-category fallback seat counts for designators not in the lookup table.
+#: ``unknown`` is the row-level fallback for a designator whose family cannot be
+#: inferred, so every flight resolves to a category default.
 CATEGORY_DEFAULTS: dict[str, int] = {
     "narrowbody": 180,
     "widebody": 300,
     "regional_jet": 100,
     "turboprop": 70,
+    "unknown": DEFAULT_SEATS,
 }
+
+#: Category used when a designator's family cannot be inferred.
+UNKNOWN_CATEGORY = "unknown"
 
 #: Manufacturer/model families used to infer a category for an unknown
 #: designator, checked in order (specific families first). Lets an off-table type
@@ -107,22 +113,27 @@ def infer_category(designator: str) -> str | None:
     return None
 
 
+def category_for(designator: str) -> str:
+    """Row-level category for a designator: its inferred family, else ``unknown``."""
+    return infer_category(designator) or UNKNOWN_CATEGORY
+
+
 def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
-    """Estimate seats per flight from ICAO type designators.
+    """Estimate seats per flight from ICAO type designators (row-level fallback).
 
     Returns the seat counts and the sorted list of unknown designators. A
-    designator missing from the lookup falls back to its inferred
-    :data:`CATEGORY_DEFAULTS` value, or :data:`DEFAULT_SEATS` when no category can
-    be inferred. Unknown types are logged with the number of affected flights
-    (not just distinct designators). An empty designator uses
-    :data:`DEFAULT_SEATS` without being logged.
+    designator missing from the lookup is resolved **per row** to a category
+    (its inferred family, or :data:`UNKNOWN_CATEGORY`) and takes that category's
+    :data:`CATEGORY_DEFAULTS` value. The log reports the number of affected
+    flights per category as well as the distinct designators. An empty designator
+    uses :data:`DEFAULT_SEATS` without being logged.
     """
     table = load_seats_table()
     normalized = ac_types.astype("string").str.strip().str.upper()
 
     resolved: list[int] = []
     unknown: set[str] = set()
-    unknown_flights = 0
+    affected: dict[str, int] = {}
     for value in normalized:
         if value is None or pd.isna(value) or value == "":
             resolved.append(DEFAULT_SEATS)
@@ -130,21 +141,31 @@ def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
         if value in table:
             seats, category = table[value]
             resolved.append(CATEGORY_DEFAULTS.get(category, DEFAULT_SEATS) if seats is None else int(seats))
-        else:
-            unknown.add(str(value))
-            unknown_flights += 1
-            inferred = infer_category(str(value))
-            resolved.append(CATEGORY_DEFAULTS.get(inferred, DEFAULT_SEATS) if inferred else DEFAULT_SEATS)
+            continue
+        category = category_for(str(value))
+        resolved.append(CATEGORY_DEFAULTS.get(category, DEFAULT_SEATS))
+        unknown.add(str(value))
+        affected[category] = affected.get(category, 0) + 1
 
     if unknown:
+        breakdown = ", ".join(f"{category}={count}" for category, count in sorted(affected.items()))
         logger.warning(
-            "Unknown ICAO aircraft types on %d flights (%d distinct) resolved via category defaults: %s",
-            unknown_flights,
+            "Unknown ICAO aircraft types on %d flights (%d distinct) resolved via category defaults [%s]: %s",
+            sum(affected.values()),
             len(unknown),
+            breakdown,
             ", ".join(sorted(unknown)),
         )
 
     return pd.Series(resolved, index=ac_types.index, dtype="int64"), sorted(unknown)
+
+
+def seats_for_flights(flights: pd.DataFrame, ac_type_column: str = "ac_type") -> pd.Series:
+    """Row-level seat estimate for a flights DataFrame, from its ``ac_type`` column."""
+    if ac_type_column not in flights.columns:
+        raise KeyError(f"column {ac_type_column!r} not in flights")
+    seats, _ = seats_for_types(flights[ac_type_column])
+    return seats
 
 
 def _gcd_distance_km(df: pd.DataFrame) -> pd.Series:
@@ -194,8 +215,7 @@ def add_edge_weights(
     elif weight == "distance":
         out["Weight"] = flight_distance_km(out, distance_source)
     else:  # seats
-        seats, _ = seats_for_types(out["ac_type"])
-        out["Weight"] = seats.astype("float64")
+        out["Weight"] = seats_for_flights(out).astype("float64")
     return out
 
 

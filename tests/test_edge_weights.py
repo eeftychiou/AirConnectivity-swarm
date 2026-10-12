@@ -10,11 +10,14 @@ import pytest
 from airconnectivity.geo import gcd
 from airconnectivity.weights import (
     DEFAULT_SEATS,
+    UNKNOWN_CATEGORY,
     add_edge_weights,
     aggregate_edges,
+    category_for,
     flight_distance_km,
     infer_category,
     load_seats_table,
+    seats_for_flights,
     seats_for_types,
 )
 
@@ -107,6 +110,42 @@ def test_infer_category_families(designator: str, category: str) -> None:
 
 def test_infer_category_returns_none_for_unknown_family() -> None:
     assert infer_category("ZZZZ") is None
+
+
+def test_category_for_falls_back_to_unknown() -> None:
+    assert category_for("B77L") == "widebody"
+    assert category_for("ZZZZ") == UNKNOWN_CATEGORY
+
+
+def test_unresolved_type_uses_unknown_category_default(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="airconnectivity.weights"):
+        seats, unknown = seats_for_types(pd.Series(["ZZZZ"]))
+
+    assert seats.tolist() == [DEFAULT_SEATS]
+    assert unknown == ["ZZZZ"]
+    assert "unknown=1" in caplog.text
+
+
+def test_unknown_type_logs_affected_flights_per_category(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="airconnectivity.weights"):
+        seats, _ = seats_for_types(pd.Series(["B77L", "B77L", "E145", "ZZZZ"]))
+
+    assert seats.tolist() == [300, 300, 100, DEFAULT_SEATS]
+    assert "widebody=2" in caplog.text
+    assert "regional_jet=1" in caplog.text
+    assert "unknown=1" in caplog.text
+
+
+def test_seats_for_flights_applies_row_level_fallback() -> None:
+    flights = pd.DataFrame({"ac_type": ["A320", "B77L", "E145", "ZZZZ"]})
+    assert seats_for_flights(flights).tolist() == [180, 300, 100, DEFAULT_SEATS]
+
+
+def test_seats_for_flights_missing_column_raises() -> None:
+    with pytest.raises(KeyError, match="ac_type"):
+        seats_for_flights(pd.DataFrame({"not_type": ["A320"]}))
 
 
 def test_unknown_type_falls_back_and_is_counted_and_logged(
