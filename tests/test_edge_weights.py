@@ -19,6 +19,7 @@ from airconnectivity.weights import (
     load_seats_table,
     seats_for_flights,
     seats_for_types,
+    segment_category,
 )
 
 AIRPORTS = {
@@ -141,6 +142,33 @@ def test_unknown_type_logs_affected_flights_per_category(
 def test_seats_for_flights_applies_row_level_fallback() -> None:
     flights = pd.DataFrame({"ac_type": ["A320", "B77L", "E145", "ZZZZ"]})
     assert seats_for_flights(flights).tolist() == [180, 300, 100, DEFAULT_SEATS]
+
+
+def test_seats_for_flights_uses_segment_for_unresolved_types() -> None:
+    # ZZZZ cannot be categorised from its designator, so the flight row's segment decides.
+    flights = pd.DataFrame(
+        {
+            "ac_type": ["ZZZZ", "ZZZZ", "ZZZZ", "ZZZZ"],
+            "statfor_market_segment": ["Regional", "Mainline", "All-Cargo", "Not Classified"],
+        }
+    )
+    assert seats_for_flights(flights).tolist() == [100, 180, 300, DEFAULT_SEATS]
+
+
+def test_designator_family_wins_over_segment() -> None:
+    # B77L is a widebody by family even on a Mainline (narrowbody) flight.
+    flights = pd.DataFrame({"ac_type": ["B77L"], "statfor_market_segment": ["Mainline"]})
+    assert seats_for_flights(flights).tolist() == [300]
+
+
+def test_segment_category_mapping() -> None:
+    assert segment_category("Regional") == "regional_jet"
+    assert segment_category("Regional Aircraft") == "regional_jet"
+    assert segment_category("Mainline") == "narrowbody"
+    assert segment_category("All-Cargo") == "widebody"
+    assert segment_category("Business Aviation") == "business_jet"
+    assert segment_category("Not Classified") is None
+    assert segment_category(None) is None
 
 
 def test_seats_for_flights_missing_column_raises() -> None:

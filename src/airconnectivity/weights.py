@@ -43,11 +43,26 @@ CATEGORY_DEFAULTS: dict[str, int] = {
     "widebody": 300,
     "regional_jet": 100,
     "turboprop": 70,
+    "business_jet": 10,
     "unknown": DEFAULT_SEATS,
 }
 
 #: Category used when a designator's family cannot be inferred.
 UNKNOWN_CATEGORY = "unknown"
+
+#: STATFOR market segment -> fallback category, used per row when an unknown
+#: designator's family cannot be inferred from the type code itself.
+SEGMENT_CATEGORY: dict[str, str] = {
+    "Mainline": "narrowbody",
+    "Traditional Scheduled": "narrowbody",
+    "Low-Cost": "narrowbody",
+    "Lowcost": "narrowbody",
+    "Charter": "narrowbody",
+    "Regional": "regional_jet",
+    "Regional Aircraft": "regional_jet",
+    "All-Cargo": "widebody",
+    "Business Aviation": "business_jet",
+}
 
 #: Manufacturer/model families used to infer a category for an unknown
 #: designator, checked in order (specific families first). Lets an off-table type
@@ -118,23 +133,27 @@ def category_for(designator: str) -> str:
     return infer_category(designator) or UNKNOWN_CATEGORY
 
 
-def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
-    """Estimate seats per flight from ICAO type designators (row-level fallback).
+def segment_category(segment: object) -> str | None:
+    """Fallback category from a STATFOR market segment, or ``None`` if unmapped."""
+    if segment is None or pd.isna(segment):
+        return None
+    return SEGMENT_CATEGORY.get(str(segment).strip())
 
-    Returns the seat counts and the sorted list of unknown designators. A
-    designator missing from the lookup is resolved **per row** to a category
-    (its inferred family, or :data:`UNKNOWN_CATEGORY`) and takes that category's
-    :data:`CATEGORY_DEFAULTS` value. The log reports the number of affected
-    flights per category as well as the distinct designators. An empty designator
-    uses :data:`DEFAULT_SEATS` without being logged.
-    """
+
+def _resolve_seats(
+    ac_types: pd.Series,
+    segments: pd.Series | None,
+) -> tuple[pd.Series, list[str]]:
+    """Resolve seats per row: lookup, then designator family, then segment, then unknown."""
     table = load_seats_table()
-    normalized = ac_types.astype("string").str.strip().str.upper()
+    types = ac_types.astype("string").str.strip().str.upper()
+    if segments is None:
+        segments = pd.Series([None] * len(ac_types), index=ac_types.index)
 
     resolved: list[int] = []
     unknown: set[str] = set()
     affected: dict[str, int] = {}
-    for value in normalized:
+    for value, segment in zip(types, segments, strict=True):
         if value is None or pd.isna(value) or value == "":
             resolved.append(DEFAULT_SEATS)
             continue
@@ -142,7 +161,7 @@ def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
             seats, category = table[value]
             resolved.append(CATEGORY_DEFAULTS.get(category, DEFAULT_SEATS) if seats is None else int(seats))
             continue
-        category = category_for(str(value))
+        category = infer_category(str(value)) or segment_category(segment) or UNKNOWN_CATEGORY
         resolved.append(CATEGORY_DEFAULTS.get(category, DEFAULT_SEATS))
         unknown.add(str(value))
         affected[category] = affected.get(category, 0) + 1
@@ -160,11 +179,33 @@ def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
     return pd.Series(resolved, index=ac_types.index, dtype="int64"), sorted(unknown)
 
 
-def seats_for_flights(flights: pd.DataFrame, ac_type_column: str = "ac_type") -> pd.Series:
-    """Row-level seat estimate for a flights DataFrame, from its ``ac_type`` column."""
+def seats_for_types(ac_types: pd.Series) -> tuple[pd.Series, list[str]]:
+    """Estimate seats per flight from ICAO type designators (no segment context).
+
+    Returns the seat counts and the sorted list of unknown designators. A
+    designator missing from the lookup resolves to its inferred family category,
+    else :data:`UNKNOWN_CATEGORY`. Use :func:`seats_for_flights` when the flight
+    rows (and their STATFOR segment) are available, so an unresolvable designator
+    can fall back to the segment's category.
+    """
+    return _resolve_seats(ac_types, None)
+
+
+def seats_for_flights(
+    flights: pd.DataFrame,
+    ac_type_column: str = "ac_type",
+    segment_column: str = "statfor_market_segment",
+) -> pd.Series:
+    """Row-level seat estimate for a flights DataFrame.
+
+    Priority per row: exact ICAO lookup, the designator's inferred family, the
+    flight's STATFOR market segment (e.g. ``Regional`` -> regional_jet), then
+    :data:`UNKNOWN_CATEGORY`. The log reports affected flights per category.
+    """
     if ac_type_column not in flights.columns:
         raise KeyError(f"column {ac_type_column!r} not in flights")
-    seats, _ = seats_for_types(flights[ac_type_column])
+    segments = flights[segment_column] if segment_column in flights.columns else None
+    seats, _ = _resolve_seats(flights[ac_type_column], segments)
     return seats
 
 
