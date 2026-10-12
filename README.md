@@ -1,91 +1,118 @@
-# Pagerank Air Connectivity Indicator and optimizer
+# AirConnectivity — PageRank air connectivity indicator
 
-Air Connectivity Indicator using PageRank. Loads EUROCONTROL R&D Data to
-calculate a connectivity indicator using weighted PageRank and other network
-metrics.
+Analyse EUROCONTROL R&D flight data as a directed airport network and rank
+airports by **static** weighted PageRank and by **temporal** PageRank
+(Rozenshtein & Gionis, 2016), where walks follow only feasible connections that
+respect a minimum connecting time (MCT).
 
-The weight of an edge can be a simple connection, proportional to the onwards
-connectivity at the destination airport, or (TODO) proportional to the passenger
-capacity of the flight.
+The package installs an `airconn` CLI that loads the gzipped EUROCONTROL
+exports in place, builds per-window graphs, ranks airports and writes CSV,
+Markdown and interactive HTML reports.
 
-Data can be downloaded from the
-[EUROCONTROL R&D Data Archive](https://www.eurocontrol.int/dashboard/rnd-data-archive).
+All outputs are **aggregated airport-level results**; raw flight rows are never
+written and no data is committed to the repository.
+
+## Screenshots
+
+The report below was generated from a real two-period run:
+
+```bash
+DATA="G:/My Drive/PRC Data Challenge"
+airconn rank --data-root "$DATA" --periods 202403,202404 \
+    --window M --weight seats --method both --out outputs
+airconn report --data-root "$DATA" --rankings outputs --periods 202403 202404 \
+    --html outputs/report.html --inline --top-n 25
+```
+
+It is a single page with a period selector over both months. See
+[`docs/usage.md`](docs/usage.md) for the exact commands.
+
+| | |
+| --- | --- |
+| **Full interactive HTML report** (`airconn report --html`) | **Static vs temporal PageRank** per period |
+| ![Full report](docs/img/01_report_full.png) | ![Static vs temporal](docs/img/02_static_vs_temporal.png) |
+| **Rank change between months** (dumbbell) | **One airport's PageRank over time** (daily windows) |
+| ![Rank change](docs/img/03_rank_change.png) | ![Time series](docs/img/04_time_series.png) |
+| **Airport map** sized by PageRank — the callout reproduces the map's hover tooltip for the top airport | **CLI summary and Markdown report excerpt** |
+| ![Airport map](docs/img/05_airport_map.png) | ![CLI and report](docs/img/06_cli_and_report.png) |
+
+The map chart has a hover tooltip per airport (ICAO, name, score, rank). The
+screenshot above captions the tooltip for the top airport as a callout, since a
+headless capture cannot reproduce a live pointer hover.
 
 ## Install
 
-Python >= 3.10 is required.
+Python >= 3.10.
 
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate ; POSIX: source .venv/bin/activate
-pip install -e .
+pip install -e .            # core: numpy, pandas, networkx, scipy
+pip install -e ".[viz]"     # + bokeh, for the interactive HTML report
+pip install -e ".[dev]"     # + pytest, ruff, bokeh (development)
 ```
 
-Optional visualisation extras (bokeh, matplotlib, igraph) and developer tools:
+## Data layout
+
+Point `--data-root` (or `AIRCONN_DATA_ROOT`) at a directory of period folders
+holding the EUROCONTROL exports:
+
+```
+<data-root>/
+  202403/
+    Flights_20240301_20240331.csv.gz
+  202404/
+    Flights_20240401_20240430.csv.gz
+  ...
+```
+
+Folders are `YYYYMM`. The 2020–2023 folders are **quarterly** (03/06/09/12);
+2024–2025 are mostly monthly. The loader reads only `Flights_*.csv.gz`
+(recursively, since some exports nest one level deeper) and ignores everything
+else. Data can be downloaded from the
+[EUROCONTROL R&D Data Archive](https://www.eurocontrol.int/dashboard/rnd-data-archive).
+
+## Quickstart
 
 ```bash
-pip install -e ".[viz,dev]"
+DATA="G:/My Drive/PRC Data Challenge"
+
+# 1. Load a period and print aggregate counts (no row-level data).
+airconn load --data-root "$DATA" --period 202403 --summary
+
+# 2. Write per-period airport rankings as CSV.
+airconn rank --data-root "$DATA" --periods 202403,202404 \
+    --window M --weight seats --method both --out outputs
+
+# 3. Build the Markdown month-comparison report.
+airconn report --rankings outputs --out outputs/report.md
+
+# 4. Build the interactive HTML report (self-contained; --inline works offline).
+airconn report --data-root "$DATA" --rankings outputs --periods 202403 202404 \
+    --html outputs/report.html --inline --top-n 25
 ```
 
-## Usage
+See [`docs/usage.md`](docs/usage.md) for every command and option, the default
+passenger filter, the weight modes, MCT/max-wait, the output CSV columns and how
+the seat and airport-name lookups are sourced.
 
-The data root is passed in — either with `--data-root` or the
-`AIRCONN_DATA_ROOT` environment variable. No path is ever hard-coded, and no
-data or row-level extracts are committed to git.
+## Package layout
 
-```bash
-airconn --help
-airconn --data-root /path/to/data load --period 202403 --summary
-airconn --data-root /path/to/data rank --period 202403
-airconn --data-root /path/to/data report --period 202403 --period 202406
 ```
-
-Data is expected as `<data-root>/<YYYYMM>/Flights_*.csv.gz` (EUROCONTROL
-export). Folders are not contiguous months: 2020–2023 are quarterly, 2024–2025
-are mostly monthly.
-
-`airconn load --period 202403 --summary` reads the gz files in place and prints
-aggregate counts per market segment and flight type only — no row-level data is
-written. In Python:
-
-```python
-from airconnectivity.io import discover_periods, load_flights
-
-periods = discover_periods("path/to/data")          # e.g. ["202403", "202406"]
-df = load_flights("path/to/data", periods=["202403"])
-```
-
-`load_flights` returns a typed DataFrame with snake_case columns and UTC
-datetimes. By default it keeps ICAO flight type `S` and the passenger market
-segments `Mainline`, `Regional`, `Low-Cost` and `Charter`; both filters are
-configurable, and `time_basis="actual"` (default) or `"filed"` picks the
-timestamp pair. Rows missing ADEP, ADES or the selected times, and rows with
-`ADEP == ADES`, are dropped.
-
-Edge weights are chosen with `weight="frequency"|"unweighted"|"distance"|"seats"`
-(`airconnectivity.weights`):
-
-```python
-from airconnectivity.weights import aggregate_edges
-
-edges = aggregate_edges(df, weight="seats")   # adep, ades, Weight
-```
-
-`distance` uses great-circle km from the coordinates (or `distance_source="actual"`
-for the flown distance); `seats` uses the committed
-`src/airconnectivity/data/ac_type_seats.csv` lookup (ICAO type -> typical seats),
-falling back to 150 seats for unknown types, which are counted and logged.
-
-Flights are bucketed into daily, ISO-weekly or monthly windows (UTC) and turned
-into directed graphs; `window_metrics` returns a per-window airport table
-(pagerank, in/out degree, strength):
-
-```python
-from airconnectivity.graphs import window_metrics, windows
-
-for window_start, graph in windows(df, freq="W", weight="seats"):
-    ...
-metrics = window_metrics(df, freq="D")
+src/airconnectivity/
+  config.py       explicit Config dataclass (replaces the old settings module)
+  geo.py          great-circle distance and flight-time estimates
+  io.py           period discovery + EUROCONTROL flight-file loaders
+  weights.py      edge weighting (frequency, unweighted, distance, seats)
+  graphs.py       time-windowed graphs (daily/weekly/monthly) + static PageRank
+  temporal.py     MCT/respecting connections + temporal PageRank
+  report.py       ranking CSVs and the Markdown report
+  report_html.py  the interactive bokeh HTML report
+  cli.py          the `airconn` command-line entry point
+  data/           committed lookups: ICAO aircraft seats, ICAO airport names
+tests/            pytest suite (small synthetic fixtures only)
+docs/             usage guide and screenshots
+scripts/          make_screenshots.py (regenerate docs/img)
 ```
 
 ## Development
@@ -97,16 +124,3 @@ pytest
 ```
 
 CI runs ruff and pytest on Python 3.10 and 3.12.
-
-## Package layout
-
-```
-src/airconnectivity/
-  config.py    explicit Config dataclass (replaces the old global settings module)
-  geo.py       great-circle distance and flight-time estimates
-  io.py        period discovery + EUROCONTROL flight-file loaders
-  weights.py   edge weighting schemes
-  graphs.py    time-windowed graphs and static weighted PageRank
-  cli.py       the `airconn` command-line entry point
-tests/         pytest suite (small synthetic fixtures only)
-```
