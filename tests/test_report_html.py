@@ -113,6 +113,15 @@ def test_chart_map_unknown_name_is_blank() -> None:
     assert data["name"] == [""]
 
 
+def test_airport_names_cover_common_airports_beyond_top_25() -> None:
+    from airconnectivity.report_html import load_airport_names
+
+    names = load_airport_names()
+    for code in ("EGLL", "EDDH", "EDDS", "LEBL", "LTFM", "OMDB", "KJFK", "LSZH"):
+        assert names.get(code), f"{code} should have a name"
+    assert len(names) > 300
+
+
 def test_cli_report_html_from_rankings(rankings_dir: Path, tmp_path: Path) -> None:
     out = tmp_path / "cli.html"
     assert (
