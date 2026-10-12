@@ -96,6 +96,25 @@ def test_write_rankings_creates_named_files(tmp_path: Path) -> None:
     assert all(path.exists() for path in paths)
 
 
+def test_write_rankings_excludes_adjacent_month_windows(tmp_path: Path) -> None:
+    # A real export contains a few flights whose UTC departure falls in the
+    # adjacent month; those partial windows must not be written for 202403.
+    flights = _flights_frame(
+        [
+            ("EGLL", "LFPG", "2024-02-29 23:35:00", "2024-03-01 01:00:00"),
+            ("EGLL", "LFPG", "2024-03-10 06:00:00", "2024-03-10 07:30:00"),
+            ("LFPG", "EHAM", "2024-03-20 08:30:00", "2024-03-20 09:40:00"),
+            ("EHAM", "EGLL", "2024-04-01 01:00:00", "2024-04-01 02:00:00"),
+        ]
+    )
+    paths = write_rankings(flights, tmp_path, "202403", freq="M", weight="frequency", method="temporal")
+
+    frame = pd.read_csv(paths[0])
+    labels = pd.to_datetime(frame["window"], utc=True).dt.strftime("%Y%m").unique().tolist()
+    assert labels == ["202403"]
+    assert len(frame) == 3  # EGLL, LFPG, EHAM in the March window only
+
+
 def test_build_report_without_rankings(tmp_path: Path) -> None:
     path = build_report(tmp_path / "empty", tmp_path / "report.md")
     assert "No rankings found" in path.read_text(encoding="utf-8")

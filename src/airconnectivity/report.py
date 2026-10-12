@@ -73,15 +73,29 @@ def write_rankings(
     weight: str = "seats",
     method: str = "both",
 ) -> list[Path]:
-    """Write ``rankings_<period>_<freq>_<method>.csv`` files and return their paths."""
+    """Write ``rankings_<period>_<freq>_<method>.csv`` files and return their paths.
+
+    Only windows that belong to ``period`` are written: an export can contain a
+    few flights whose UTC departure falls in an adjacent month, and those partial
+    windows must not be averaged into the labelled month.
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
     for name, frame in rank_airports(flights, freq=freq, weight=weight, method=method).items():
+        frame = _restrict_to_period(frame, period)
         path = out / f"rankings_{period}_{freq}_{name}.csv"
         frame.to_csv(path, index=False)
         paths.append(path)
     return paths
+
+
+def _restrict_to_period(frame: pd.DataFrame, period: str) -> pd.DataFrame:
+    """Keep only rows whose ``window`` belongs to ``period`` (``YYYYMM``)."""
+    if frame.empty:
+        return frame
+    labels = pd.to_datetime(frame["window"], utc=True).dt.strftime("%Y%m")
+    return frame[labels == period].reset_index(drop=True)
 
 
 def _load_rankings(directory: str | Path) -> list[tuple[str, str, str, pd.DataFrame]]:
