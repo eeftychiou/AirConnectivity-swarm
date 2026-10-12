@@ -1,9 +1,11 @@
-# Data (never commit)
+# Data (never commit). The packaged seats lookup is re-included by the
+# negation below; /data/ and /outputs/ are anchored to the repo root.
 *.csv
 *.csv.gz
 *.zip
-data/
-outputs/
+/data/
+/outputs/
+!src/airconnectivity/data/*.csv
 
 # Python
 __pycache__/

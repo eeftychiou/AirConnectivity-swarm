@@ -62,6 +62,20 @@ configurable, and `time_basis="actual"` (default) or `"filed"` picks the
 timestamp pair. Rows missing ADEP, ADES or the selected times, and rows with
 `ADEP == ADES`, are dropped.
 
+Edge weights are chosen with `weight="frequency"|"unweighted"|"distance"|"seats"`
+(`airconnectivity.weights`):
+
+```python
+from airconnectivity.weights import aggregate_edges
+
+edges = aggregate_edges(df, weight="seats")   # adep, ades, Weight
+```
+
+`distance` uses great-circle km from the coordinates (or `distance_source="actual"`
+for the flown distance); `seats` uses the committed
+`src/airconnectivity/data/ac_type_seats.csv` lookup (ICAO type -> typical seats),
+falling back to 150 seats for unknown types, which are counted and logged.
+
 ## Development
 
 ```bash
