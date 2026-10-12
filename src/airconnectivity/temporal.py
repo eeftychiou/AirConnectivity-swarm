@@ -228,9 +228,16 @@ def compare_pagerank(
     spearman = float(stats.spearmanr(t, s).statistic) if len(nodes) > 1 else float("nan")
     kendall = float(stats.kendalltau(t, s).statistic) if len(nodes) > 1 else float("nan")
 
-    top_temporal = {node for node, _ in sorted(temporal.items(), key=lambda kv: kv[1], reverse=True)[:k]}
-    top_static = {node for node, _ in sorted(static.items(), key=lambda kv: kv[1], reverse=True)[:k]}
-    overlap = len(top_temporal & top_static) / k if k else 0.0
+    # Top-k overlap is taken over at most ``k`` airports, so identical rankings
+    # of fewer than k airports still score 1.0.
+    effective_k = min(k, len(nodes))
+    top_temporal = {
+        node for node, _ in sorted(temporal.items(), key=lambda kv: kv[1], reverse=True)[:effective_k]
+    }
+    top_static = {
+        node for node, _ in sorted(static.items(), key=lambda kv: kv[1], reverse=True)[:effective_k]
+    }
+    overlap = len(top_temporal & top_static) / effective_k if effective_k else 0.0
 
     return RankComparison(
         spearman=spearman, kendall=kendall, top_k_overlap=overlap, k=k, nodes=len(nodes)

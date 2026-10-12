@@ -147,6 +147,14 @@ def test_compare_pagerank_identical_and_reversed() -> None:
     assert reversed_ranks.top_k_overlap == pytest.approx(0.0)
 
 
+def test_compare_pagerank_top_k_overlap_with_fewer_than_k_airports() -> None:
+    ranks = {"A": 0.6, "B": 0.4}
+    comparison = compare_pagerank(dict(ranks), dict(ranks), k=10)
+    assert comparison.top_k_overlap == pytest.approx(1.0)
+    assert comparison.spearman == pytest.approx(1.0)
+    assert comparison.k == 10
+
+
 def test_temporal_pagerank_argument_validation() -> None:
     flights = _flights([("A", "B", "2024-03-01 06:00:00", "2024-03-01 07:00:00")])
     with pytest.raises(ValueError, match="alpha"):
