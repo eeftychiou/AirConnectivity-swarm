@@ -149,3 +149,272 @@ DNMM,Lagos
 DAAG,Algiers
 GMMN,Casablanca
 DTTA,Tunis
+BIKF,Reykjavik Keflavik
+EBCI,Brussels Charleroi
+EGAA,Belfast International
+EGAC,Belfast City
+EGNT,Newcastle
+EGPD,Aberdeen
+EGBB,Birmingham
+EGGD,Bristol
+EGLC,London City
+EGPF,Glasgow
+EGFF,Cardiff
+EGHQ,Newquay
+EICK,Cork
+EDDH,Hamburg
+EDDS,Stuttgart
+EDDV,Hanover
+EDDN,Nuremberg
+EDDW,Bremen
+EDLW,Dortmund
+EDFH,Frankfurt Hahn
+EDDP,Leipzig Halle
+EDSB,Karlsruhe Baden
+ELLX,Luxembourg
+LSZB,Bern
+LSZR,Altenrhein
+LOWG,Graz
+LOWS,Salzburg
+LOWK,Klagenfurt
+LIPH,Treviso
+LIMF,Turin
+LICA,Lamezia Terme
+LIEA,Alghero
+LIRZ,Perugia
+LEST,Santiago
+LEBB,Bilbao
+LEAS,Asturias
+LEXJ,Santander
+LERS,Reus
+LEMH,Menorca
+LEGR,Granada
+LEAL,Alicante
+LEIB,Ibiza
+LEVC,Valencia
+LEZL,Seville
+LPMA,Madeira
+LPPD,Ponta Delgada
+LPFR,Faro
+LFRB,Brest
+LFRS,Nantes
+LFST,Strasbourg
+LFLB,Chambery
+LFKC,Calvi
+LFKJ,Ajaccio
+LFKB,Bastia
+LFQQ,Lille
+LFBO,Toulouse
+LFML,Marseille
+LFSB,Basel
+LICC,Catania
+LICJ,Palermo
+LIME,Milan Bergamo
+LIML,Milan Linate
+LIPE,Bologna
+LIRN,Naples
+ENBR,Bergen
+ENVA,Stavanger
+ENCN,Kristiansand
+ENTO,Sandefjord
+EKYT,Aalborg
+ESGG,Gothenburg
+ESMS,Malmo
+EFTU,Turku
+EFRO,Rovaniemi
+EPGD,Gdansk
+EPKT,Katowice
+EPWR,Wroclaw
+EPPO,Poznan
+LZIB,Bratislava
+LHDC,Debrecen
+LRCL,Cluj
+LATI,Tirana
+LBBG,Burgas
+LBWN,Varna
+LGTS,Thessaloniki
+LGKO,Kos
+LGSA,Chania
+LGSR,Santorini
+LGZA,Zakynthos
+LDSP,Split
+LDDU,Dubrovnik
+LYPG,Podgorica
+LYTV,Tivat
+LCPH,Paphos
+LLBG,Tel Aviv
+OLBA,Beirut
+UBBB,Baku
+UAAA,Almaty
+UACC,Astana
+UTTT,Tashkent
+UGTB,Tbilisi
+UDYZ,Yerevan
+LTAC,Ankara
+LTBJ,Izmir
+HSSS,Khartoum
+HAAB,Addis Ababa
+DTNH,Enfidha
+DTTJ,Djerba
+GMMX,Marrakesh
+GMAD,Agadir
+GMTT,Tangier
+GMME,Rabat
+HELX,Luxor
+HESH,Sharm el-Sheikh
+GCFV,Fuerteventura
+GCLP,Gran Canaria
+GCRR,Lanzarote
+GCTS,Tenerife South
+GCXO,Tenerife North
+OMDW,Al Maktoum
+OMSJ,Sharjah
+OPKC,Karachi
+OPLA,Lahore
+OPIS,Islamabad
+VECC,Kolkata
+VOHS,Hyderabad
+VOCI,Kochi
+VAAH,Ahmedabad
+VTSP,Phuket
+VTCC,Chiang Mai
+WMKP,Penang
+WBKK,Kota Kinabalu
+WADD,Bali
+WARR,Surabaya
+RPVM,Cebu
+VVDN,Da Nang
+RKPC,Jeju
+RKSS,Gimpo
+RJGG,Nagoya
+RJCC,Sapporo
+ROAH,Okinawa
+ZSHC,Hangzhou
+ZGSZ,Shenzhen
+ZGHA,Changsha
+ZHHH,Wuhan
+ZPPP,Kunming
+ZLXY,Xi'an
+ZSQD,Qingdao
+ZBTJ,Tianjin
+ZYTX,Shenyang
+ZGNN,Nanning
+VMMC,Macau
+YBCG,Gold Coast
+YSCB,Canberra
+NZCH,Christchurch
+FALE,Durban
+HKMO,Mombasa
+DNAA,Abuja
+DAOO,Oran
+GOBD,Dakar
+GBYD,Banjul
+DGAA,Accra
+DIAP,Abidjan
+FIMP,Mauritius
+FMMI,Antananarivo
+HTDA,Dar es Salaam
+HTZA,Zanzibar
+HRYR,Kigali
+FZAA,Kinshasa
+FNLU,Luanda
+FVHA,Harare
+FLKK,Lusaka
+FBSK,Gaborone
+TTPP,Port of Spain
+TJSJ,San Juan
+MKJS,Montego Bay
+MWCR,Grand Cayman
+MYNN,Nassau
+TNCA,Aruba
+TNCC,Curacao
+TFFF,Martinique
+TFFR,Guadeloupe
+SPZO,Cusco
+SEQM,Quito
+SKCG,Cartagena
+SVMI,Caracas
+SUMU,Montevideo
+SGAS,Asuncion
+SLVR,Santa Cruz
+SLLP,La Paz
+SBBE,Belem
+SBRF,Recife
+SBSV,Salvador
+SBPA,Porto Alegre
+SBCT,Curitiba
+SBBR,Brasilia
+SBKP,Campinas
+SBGL,Rio Galeao
+SBFZ,Fortaleza
+MMGL,Guadalajara
+MMMY,Monterrey
+MMPR,Puerto Vallarta
+MMSD,Los Cabos
+MMMD,Merida
+MPTO,Panama
+MROC,San Jose
+MNMG,Managua
+MSLP,San Salvador
+MGGT,Guatemala
+MHLM,San Pedro Sula
+CYEG,Edmonton
+CYOW,Ottawa
+CYWG,Winnipeg
+CYHZ,Halifax
+CYQB,Quebec
+KPDX,Portland
+KSLC,Salt Lake City
+KSTL,St Louis
+KMCI,Kansas City
+KMDW,Chicago Midway
+KDAL,Dallas Love
+KHOU,Houston Hobby
+KOAK,Oakland
+KSJC,San Jose
+KBUR,Burbank
+KONT,Ontario
+KSMF,Sacramento
+KHNL,Honolulu
+PANC,Anchorage
+KMSY,New Orleans
+KBNA,Nashville
+KRDU,Raleigh
+KCVG,Cincinnati
+KCMH,Columbus
+KIND,Indianapolis
+KMKE,Milwaukee
+KCLE,Cleveland
+KPIT,Pittsburgh
+KBUF,Buffalo
+KJAX,Jacksonville
+KTPA,Tampa
+KRSW,Fort Myers
+KPBI,West Palm Beach
+KFLL,Fort Lauderdale
+KMEM,Memphis
+KOKC,Oklahoma City
+KABQ,Albuquerque
+KTUS,Tucson
+KLGB,Long Beach
+KSNA,Santa Ana
+KSAT,San Antonio
+KAUS,Austin
+KBOI,Boise
+KGEG,Spokane
+KOMA,Omaha
+KCHS,Charleston
+KSAV,Savannah
+KPVD,Providence
+KBDL,Hartford
+KMHT,Manchester
+KPWM,Portland Maine
+KROC,Rochester
+KSYR,Syracuse
+KORF,Norfolk
+KTYS,Knoxville
+KGRR,Grand Rapids
+KMSN,Madison
+KBIL,Billings
+KPSP,Palm Springs
+KOGG,Kahului
