@@ -98,7 +98,8 @@ def _restrict_to_period(frame: pd.DataFrame, period: str) -> pd.DataFrame:
     return frame[labels == period].reset_index(drop=True)
 
 
-def _load_rankings(directory: str | Path) -> list[tuple[str, str, str, pd.DataFrame]]:
+def load_rankings(directory: str | Path) -> list[tuple[str, str, str, pd.DataFrame]]:
+    """Load ``rankings_*.csv`` files as ``(period, freq, method, frame)`` tuples."""
     loaded: list[tuple[str, str, str, pd.DataFrame]] = []
     for path in sorted(Path(directory).glob("rankings_*.csv")):
         match = _RANKING_RE.match(path.name)
@@ -118,7 +119,7 @@ def _rank_map(scores: dict[str, float]) -> dict[str, int]:
 
 def build_report(rankings_dir: str | Path, out_path: str | Path, top_k: int = 20) -> Path:
     """Write a short Markdown report from the ``rankings_*.csv`` files."""
-    loaded = _load_rankings(rankings_dir)
+    loaded = load_rankings(rankings_dir)
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
