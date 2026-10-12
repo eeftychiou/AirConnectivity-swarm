@@ -11,10 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-#: Market segments kept when filtering for passenger flights.
+#: Market segments kept when filtering for passenger flights. These are the
+#: post-2022 EUROCONTROL segment rules (retroactive to 2019), which is what the
+#: 2020+ data uses.
 DEFAULT_MARKET_SEGMENTS: tuple[str, ...] = (
-    "Traditional Scheduled",
-    "Lowcost",
+    "Mainline",
+    "Regional",
+    "Low-Cost",
+    "Charter",
 )
 
 #: ICAO flight type marking a scheduled/passenger flight.

@@ -18,10 +18,16 @@ def test_help_exits_zero(capsys: pytest.CaptureFixture[str]) -> None:
     assert "report" in out
 
 
-def test_subcommands_are_stubbed_and_return_zero(capsys: pytest.CaptureFixture[str]) -> None:
-    for command in ("load", "rank", "report"):
+def test_rank_and_report_are_stubbed(capsys: pytest.CaptureFixture[str]) -> None:
+    for command in ("rank", "report"):
         assert cli.main([command]) == 0
         assert "not implemented yet" in capsys.readouterr().out
+
+
+def test_load_without_data_returns_zero_rows(capsys: pytest.CaptureFixture[str]) -> None:
+    # Default data root does not exist here; load still succeeds with no rows.
+    assert cli.main(["--data-root", "does-not-exist", "load"]) == 0
+    assert "rows: 0" in capsys.readouterr().out
 
 
 def test_no_command_prints_help(capsys: pytest.CaptureFixture[str]) -> None:

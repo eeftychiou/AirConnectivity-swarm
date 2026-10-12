@@ -1,8 +1,7 @@
 """Command-line entry point for ``airconn``.
 
-Issue #1 wires the skeleton: ``--help`` plus the ``load``, ``rank`` and
-``report`` subcommands. Later issues fill the subcommands in; for now they
-validate their arguments and report that the work is not implemented yet.
+``load`` is implemented (issue #2); ``rank`` and ``report`` are still stubs
+that later issues fill in.
 """
 
 from __future__ import annotations
@@ -24,6 +23,25 @@ def _default_data_root() -> str:
     return os.environ.get(_ENV_DATA_ROOT, "data")
 
 
+def _load_command(args: argparse.Namespace) -> int:
+    from .io import load_flights, summarise_flights
+
+    periods = args.periods or None
+    df = load_flights(args.data_root, periods=periods)
+    summary = summarise_flights(df)
+
+    print(f"periods: {', '.join(periods) if periods else '(all discovered)'}")
+    print(f"rows: {summary['rows']}")
+    if args.summary:
+        print("by market segment:")
+        for segment, count in sorted(summary["by_market_segment"].items()):
+            print(f"  {segment}: {count}")
+        print("by flight type:")
+        for flight_type, count in sorted(summary["by_flight_type"].items()):
+            print(f"  {flight_type}: {count}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="airconn",
@@ -39,9 +57,14 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
     load = subparsers.add_parser("load", help="load flights for a period and print a summary")
-    load.add_argument("--period", help="period folder, e.g. 202403")
+    load.add_argument(
+        "--period",
+        action="append",
+        dest="periods",
+        help="period folder, e.g. 202403; repeatable (default: all discovered)",
+    )
     load.add_argument("--summary", action="store_true", help="print counts per segment and type")
-    load.set_defaults(func=_cmd_load)
+    load.set_defaults(func=_load_command)
 
     rank = subparsers.add_parser("rank", help="rank airports for one or more periods")
     rank.add_argument("--period", action="append", dest="periods", help="period folder; repeatable")
@@ -61,11 +84,6 @@ def _config(args: argparse.Namespace) -> Config:
 def _not_implemented(command: str) -> int:
     print(f"airconn {command}: not implemented yet")
     return 0
-
-
-def _cmd_load(args: argparse.Namespace) -> int:
-    _ = _config(args)
-    return _not_implemented("load")
 
 
 def _cmd_rank(args: argparse.Namespace) -> int:
