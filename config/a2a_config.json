@@ -1,0 +1,37 @@
+{
+  "protocol_version": "a2a/v1.0",
+  "authorized_agents": {
+    "antigravity": {
+      "model_family": "custom",
+      "framework": "custom",
+      "role_scope": "worker",
+      "public_key_or_secret_name": "WWTnxi5db8aIZVomxVRaYuKWQRrscg35qacWn/MsvXg=",
+      "key_type": "ed25519"
+    },
+    "deepseek": {
+      "model_family": "custom",
+      "framework": "custom",
+      "role_scope": "worker",
+      "public_key_or_secret_name": "zPU8E32ae2lUvnuglpkgOXNk0X+Pp1fCZU+AzXjQZk8=",
+      "key_type": "ed25519"
+    },
+    "claude": {
+      "model_family": "custom",
+      "framework": "custom",
+      "role_scope": "worker",
+      "public_key_or_secret_name": "dc4lFFdUZybV3TSmjhnZzAKzJPyxQ740LQDXHD/krsU=",
+      "key_type": "ed25519"
+    },
+    "codex": {
+      "model_family": "custom",
+      "framework": "custom",
+      "role_scope": "worker",
+      "public_key_or_secret_name": "Rbt7S+ODfz3AAFvU5j464bFXowWEWCGVNuwRsV4qizQ=",
+      "key_type": "ed25519"
+    }
+  },
+  "revocation_list": [],
+  "fast_plane": {
+    "enabled": true
+  }
+}
