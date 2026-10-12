@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 viz = ["bokeh>=3.0", "matplotlib>=3.6", "igraph>=0.10"]
-dev = ["pytest>=7.0", "ruff>=0.4"]
+dev = ["pytest>=7.0", "ruff>=0.4", "bokeh>=3.0"]
 
 [project.scripts]
 airconn = "airconnectivity.cli:main"

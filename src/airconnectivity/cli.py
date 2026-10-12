@@ -1,6 +1,7 @@
 """Command-line entry point for ``airconn``.
 
-Implements the ``load``, ``rank`` and ``report`` subcommands.
+Implements the ``load``, ``rank`` and ``report`` subcommands (``report`` builds
+a Markdown comparison or, with ``--html``, an interactive bokeh report).
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import logging
 import os
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from . import __version__
 from .config import DEFAULT_MARKET_SEGMENTS
@@ -22,11 +24,15 @@ def _default_data_root() -> str:
     return os.environ.get(_ENV_DATA_ROOT, "data")
 
 
-def _parse_periods(value: str | None) -> list[str]:
-    """Split a ``202403,202404`` argument into period codes."""
+def _parse_periods(value: str | list[str] | None) -> list[str]:
+    """Normalise periods from ``202403,202404``, ``["202403", "202404"]`` or both."""
     if not value:
         return []
-    return [part.strip() for part in value.split(",") if part.strip()]
+    parts = value if isinstance(value, (list, tuple)) else [value]
+    periods: list[str] = []
+    for part in parts:
+        periods.extend(item.strip() for item in str(part).split(",") if item.strip())
+    return periods
 
 
 def _load_command(args: argparse.Namespace) -> int:
@@ -56,17 +62,45 @@ def _rank_command(args: argparse.Namespace) -> int:
     periods = _parse_periods(args.periods) or discover_periods(args.data_root)
     for period in periods:
         df = load_flights(args.data_root, periods=[period])
-        for path in write_rankings(
-            df, args.out, period, freq=args.window, weight=args.weight, method=args.method
-        ):
+        for path in write_rankings(df, args.out, period, freq=args.window, weight=args.weight, method=args.method):
             print(f"wrote {path}")
     return 0
 
 
 def _report_command(args: argparse.Namespace) -> int:
-    from .report import build_report
+    from .report import build_report, write_rankings
 
-    print(f"wrote {build_report(args.rankings, args.out)}")
+    if not args.html:
+        print(f"wrote {build_report(args.rankings, args.out)}")
+        return 0
+
+    import pandas as pd
+
+    from .io import load_flights
+    from .report_html import build_html_report
+
+    periods = _parse_periods(args.periods)
+    frames: list[pd.DataFrame] = []
+    if args.data_root and periods:
+        for period in periods:
+            df = load_flights(args.data_root, periods=[period])
+            frames.append(df)
+            # (Re)compute the monthly and daily rankings the HTML needs, unless present.
+            for freq in ("M", "D"):
+                if not (Path(args.rankings) / f"rankings_{period}_{freq}_temporal.csv").exists():
+                    write_rankings(df, args.rankings, period, freq=freq, weight=args.weight, method="both")
+    flights = pd.concat(frames, ignore_index=True) if frames else None
+
+    path = build_html_report(
+        args.rankings,
+        args.html,
+        top_n=args.top_n,
+        inline=args.inline,
+        flights=flights,
+        weight=args.weight,
+        periods=periods or None,
+    )
+    print(f"wrote {path}")
     return 0
 
 
@@ -118,15 +152,23 @@ def build_parser() -> argparse.ArgumentParser:
     rank.add_argument("--periods", help="comma-separated periods, e.g. 202403,202404")
     rank.add_argument("--window", choices=list(WINDOW_FREQUENCIES), default="M", help="window frequency")
     rank.add_argument("--weight", choices=list(WEIGHT_MODES), default="seats", help="edge weight scheme")
-    rank.add_argument(
-        "--method", choices=["static", "temporal", "both"], default="both", help="PageRank method"
-    )
+    rank.add_argument("--method", choices=["static", "temporal", "both"], default="both", help="PageRank method")
     rank.add_argument("--out", default="outputs", help="output directory for the CSV files")
     rank.set_defaults(func=_rank_command)
 
-    report = subparsers.add_parser("report", help="build the Markdown month-comparison report")
+    report = subparsers.add_parser("report", help="build the Markdown or bokeh HTML report")
+    _add_data_root(report, argparse.SUPPRESS)
     report.add_argument("--rankings", default="outputs", help="directory of rankings_*.csv files")
-    report.add_argument("--out", default="outputs/report.md", help="output Markdown report")
+    report.add_argument("--out", default="outputs/report.md", help="output Markdown report (without --html)")
+    report.add_argument("--html", help="write an interactive bokeh HTML report to this path instead")
+    report.add_argument(
+        "--periods",
+        nargs="+",
+        help="periods to (re)compute rankings for, space- or comma-separated, e.g. 202403 202404",
+    )
+    report.add_argument("--top-n", type=int, default=25, dest="top_n", help="airports per chart")
+    report.add_argument("--inline", action="store_true", help="embed bokeh resources for offline viewing")
+    report.add_argument("--weight", default="seats", help="edge weight scheme noted in the report header")
     report.set_defaults(func=_report_command)
 
     return parser
