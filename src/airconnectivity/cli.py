@@ -24,11 +24,15 @@ def _default_data_root() -> str:
     return os.environ.get(_ENV_DATA_ROOT, "data")
 
 
-def _parse_periods(value: str | None) -> list[str]:
-    """Split a ``202403,202404`` argument into period codes."""
+def _parse_periods(value: str | list[str] | None) -> list[str]:
+    """Normalise periods from ``202403,202404``, ``["202403", "202404"]`` or both."""
     if not value:
         return []
-    return [part.strip() for part in value.split(",") if part.strip()]
+    parts = value if isinstance(value, (list, tuple)) else [value]
+    periods: list[str] = []
+    for part in parts:
+        periods.extend(item.strip() for item in str(part).split(",") if item.strip())
+    return periods
 
 
 def _load_command(args: argparse.Namespace) -> int:
@@ -153,7 +157,8 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--html", help="write an interactive bokeh HTML report to this path instead")
     report.add_argument(
         "--periods",
-        help="periods to (re)compute rankings for before building the HTML, e.g. 202403,202404",
+        nargs="+",
+        help="periods to (re)compute rankings for, space- or comma-separated, e.g. 202403 202404",
     )
     report.add_argument("--top-n", type=int, default=25, dest="top_n", help="airports per chart")
     report.add_argument("--inline", action="store_true", help="embed bokeh resources for offline viewing")

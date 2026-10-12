@@ -87,3 +87,58 @@ def test_cli_report_html_from_rankings(rankings_dir: Path, tmp_path: Path) -> No
     text = out.read_text(encoding="utf-8")
     assert FIGURE_TITLES["top"] in text
     assert FIGURE_IDS["top"] in text
+
+
+def test_cli_report_accepts_space_and_comma_separated_periods() -> None:
+    parser = cli.build_parser().parse_args(["report", "--periods", "202403", "202404", "--html", "out.html"])
+    assert parser.periods == ["202403", "202404"]
+    assert cli._parse_periods(parser.periods) == ["202403", "202404"]
+    assert cli._parse_periods(["202403,202404"]) == ["202403", "202404"]
+
+
+def _bar_renderers(fig) -> list:
+    return [
+        r
+        for r in fig.renderers
+        if hasattr(r, "data_source") and "x_static" in getattr(r.data_source, "data", {})
+    ]
+
+
+def test_chart_top_shows_only_the_selected_period() -> None:
+    from airconnectivity.report_html import _bokeh, _chart_top
+
+    monthly = {
+        ("202403", "temporal"): {"A": 0.9, "B": 0.1},
+        ("202403", "static"): {"A": 0.8, "B": 0.2},
+        ("202404", "temporal"): {"A": 0.7, "B": 0.3},
+        ("202404", "static"): {"A": 0.6, "B": 0.4},
+    }
+    fig, _ = _chart_top(_bokeh(), monthly, ["202403", "202404"], "temporal", 2)
+
+    bars = _bar_renderers(fig)
+    assert len(bars) == 4
+    assert sum(renderer.visible for renderer in bars) == 2  # only 202403's two bars
+
+
+def test_chart_movers_picks_top_airports_by_rank() -> None:
+    from airconnectivity.report_html import _bokeh, _chart_movers
+
+    monthly = {
+        ("202403", "temporal"): {"TOP": 0.9, "A": 0.1, "B": 0.05},
+        ("202404", "temporal"): {"TOP": 0.9, "A": 0.1, "B": 0.05},
+    }
+    fig, _ = _chart_movers(_bokeh(), monthly, ["202403", "202404"], "temporal", 1)
+    assert list(fig.x_range.factors) == ["TOP"]
+
+
+def test_chart_series_single_method_and_selected_airport(rankings_dir: Path) -> None:
+    from airconnectivity.report import load_rankings
+    from airconnectivity.report_html import _bokeh, _chart_series
+
+    loaded = load_rankings(rankings_dir)
+    fig, _ = _chart_series(_bokeh(), loaded, 4, "temporal")
+
+    lines = [r for r in fig.renderers if hasattr(r, "data_source") and "window" in r.data_source.data]
+    assert len(lines) == 4
+    assert sum(line.visible for line in lines) == 1  # only the selected airport
+    assert type(fig.xaxis[0].formatter).__name__ == "DatetimeTickFormatter"  # dates, not epoch numbers

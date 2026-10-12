@@ -98,6 +98,7 @@ def _chart_top(bk, monthly, periods, method, top_n):
     fig.xaxis.ticker = bk.FixedTicker(ticks=indices)
     fig.xaxis.major_label_overrides = {index: airport for index, airport in enumerate(airports)}
     renderers: dict[str, list] = {}
+    selected = periods[0]
     for period in periods:
         static = monthly.get((period, "static"), {})
         temporal = monthly.get((period, "temporal"), {})
@@ -123,6 +124,9 @@ def _chart_top(bk, monthly, periods, method, top_n):
                 source=source,
             ),
         ]
+        # Only the selected period is visible on first render.
+        for renderer in bars:
+            renderer.visible = period == selected
         renderers[period] = bars
     fig.add_tools(
         bk.HoverTool(
@@ -151,7 +155,11 @@ def _chart_movers(bk, monthly, periods, method, top_n):
         airport_ranks[period] = {airport: rank for rank, (airport, _) in enumerate(ordered, start=1)}
 
     previous, current = periods[0], periods[-1]
-    common = sorted(set(airport_ranks[previous]) & set(airport_ranks[current]))[:top_n]
+    # Top-N by best rank in either month, not alphabetical order.
+    common = sorted(
+        set(airport_ranks[previous]) & set(airport_ranks[current]),
+        key=lambda airport: (min(airport_ranks[previous][airport], airport_ranks[current][airport]), airport),
+    )[:top_n]
     if not common:
         return None, None
     fig = bk.figure(
@@ -181,30 +189,38 @@ def _chart_movers(bk, monthly, periods, method, top_n):
     return fig, None
 
 
-def _chart_series(bk, loaded, top_n):
+def _chart_series(bk, loaded, top_n, method):
     # Prefer daily, then weekly, ranking files for the time series.
     for freq in ("D", "W"):
         series_by_airport: dict[str, list[tuple[pd.Timestamp, float]]] = defaultdict(list)
-        for _period, file_freq, method, frame in loaded:
-            if file_freq != freq or method not in ("temporal", "static"):
+        for _period, file_freq, file_method, frame in loaded:
+            if file_freq != freq or file_method != method:
                 continue
             for _, row in frame.iterrows():
                 series_by_airport[row["airport"]].append((pd.Timestamp(row["window"]), float(row["score"])))
         airports = sorted(series_by_airport, key=lambda a: -max(score for _, score in series_by_airport[a]))[:top_n]
         if not airports:
             continue
-        fig = bk.figure(height=380, title=f"{FIGURE_TITLES['series']} (per {freq} window)", name=FIGURE_IDS["series"])
+        fig = bk.figure(
+            height=380,
+            title=f"{FIGURE_TITLES['series']} (per {freq} window)",
+            name=FIGURE_IDS["series"],
+            x_axis_type="datetime",
+        )
         fig.xaxis.axis_label = "window"
         fig.yaxis.axis_label = "PageRank"
+        selected = airports[0]
         renderers: dict[str, object] = {}
         for airport in airports:
             points = sorted(series_by_airport[airport])
             source = bk.ColumnDataSource(
                 {"window": [w for w, _ in points], "score": [s for _, s in points], "airport": [airport] * len(points)}
             )
-            renderers[airport] = fig.line(x="window", y="score", source=source, legend_label=airport)
+            line = fig.line(x="window", y="score", source=source, legend_label=airport)
+            line.visible = airport == selected  # only the selected airport on first render
+            renderers[airport] = line
         fig.add_tools(bk.HoverTool(tooltips=[("airport", "@airport"), ("score", "@score{0.0000}")]))
-        selector = bk.Select(title="Airport", value=airports[0], options=list(airports))
+        selector = bk.Select(title="Airport", value=selected, options=list(airports))
         selector.js_on_change(
             "value",
             bk.CustomJS(
@@ -283,7 +299,7 @@ def build_html_report(
 
     top_fig, top_sel = _chart_top(bk, monthly, periods, method, top_n)
     movers_fig, movers_sel = _chart_movers(bk, monthly, periods, method, top_n)
-    series_fig, series_sel = _chart_series(bk, loaded, top_n)
+    series_fig, series_sel = _chart_series(bk, loaded, top_n, method)
     map_fig, map_sel = _chart_map(bk, monthly, periods, method, top_n, _airport_coords(flights))
 
     header = bk.Div(
