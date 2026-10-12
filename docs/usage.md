@@ -130,9 +130,10 @@ are missing. Four charts, each with hover tooltips:
 1. top-N airports, static vs temporal score, with a period selector;
 2. rank change between months (dumbbell);
 3. one airport's PageRank across daily/weekly windows, with an airport selector;
-4. a map of airports (lon/lat) sized by PageRank, with a hover tooltip per point
-   (each hover shows ICAO, name, score and rank; the screenshot shows the hover
-   details for the top airport).
+4. a map of airports (lon/lat) sized by PageRank; each point's hover tooltip
+   shows ICAO, name, score and rank. The screenshot in the README uses a
+   tooltip-styled callout for the top airport, captioned as a reproduction of
+   the hover tooltip (a headless capture cannot reproduce a live hover).
 
 `bokeh` is required only for this command; it is the optional `[viz]` extra and
 the module reports a clear install hint when it is missing.

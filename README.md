@@ -14,9 +14,10 @@ written and no data is committed to the repository.
 
 ## Screenshots
 
-The report below was generated from a real two-period run
-(`airconn report --periods 202403 202404 --window M --weight seats --top-n 25`):
-a single page with a period selector over both months. See
+The report below was generated from a real two-period run — rankings from
+`airconn rank --periods 202403,202404 --window M --weight seats`, then
+`airconn report --periods 202403 202404 --html report.html --inline --top-n 25`.
+It is a single page with a period selector over both months. See
 [`docs/usage.md`](docs/usage.md) for the exact commands.
 
 | | |
@@ -25,8 +26,12 @@ a single page with a period selector over both months. See
 | ![Full report](docs/img/01_report_full.png) | ![Static vs temporal](docs/img/02_static_vs_temporal.png) |
 | **Rank change between months** (dumbbell) | **One airport's PageRank over time** (daily windows) |
 | ![Rank change](docs/img/03_rank_change.png) | ![Time series](docs/img/04_time_series.png) |
-| **Airport map** sized by PageRank, with the hover details shown for the top airport | **CLI summary and Markdown report excerpt** |
+| **Airport map** sized by PageRank — the callout reproduces the map's hover tooltip for the top airport | **CLI summary and Markdown report excerpt** |
 | ![Airport map](docs/img/05_airport_map.png) | ![CLI and report](docs/img/06_cli_and_report.png) |
+
+The map chart has a hover tooltip per airport (ICAO, name, score, rank). The
+screenshot above captions the tooltip for the top airport as a callout, since a
+headless capture cannot reproduce a live pointer hover.
 
 ## Install
 
