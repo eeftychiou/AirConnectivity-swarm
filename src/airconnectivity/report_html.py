@@ -14,6 +14,8 @@ from __future__ import annotations
 import math
 import types
 from collections import defaultdict
+from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +64,21 @@ def _bokeh() -> types.SimpleNamespace:
 
 def _monthly(frame: pd.DataFrame) -> dict[str, float]:
     return frame.groupby("airport")["score"].mean().to_dict()
+
+
+_NAMES_RESOURCE = ("airconnectivity", "data/airport_names.csv")
+
+
+@lru_cache(maxsize=1)
+def load_airport_names() -> dict[str, str]:
+    """ICAO -> airport name from the committed lookup (empty for unknown codes)."""
+    resource = resources.files(_NAMES_RESOURCE[0]).joinpath(_NAMES_RESOURCE[1])
+    with resources.as_file(resource) as path:
+        table = pd.read_csv(path, comment="#")
+    return {
+        str(row.icao).strip().upper(): str(row.name).strip()
+        for row in table.itertuples(index=False)
+    }
 
 
 def _top_airports(
@@ -235,6 +252,7 @@ def _chart_series(bk, loaded, top_n, method):
 def _chart_map(bk, monthly, periods, method, top_n, coords):
     if not coords:
         return None, None
+    names = load_airport_names()
     totals: dict[str, float] = defaultdict(float)
     for period in periods:
         for airport, score in monthly.get((period, method), {}).items():
@@ -250,7 +268,7 @@ def _chart_map(bk, monthly, periods, method, top_n, coords):
     source = bk.ColumnDataSource(
         {
             "airport": airports,
-            "name": airports,
+            "name": [names.get(airport, "") for airport in airports],
             "lat": lats,
             "lon": lons,
             "score": scores,
@@ -279,10 +297,18 @@ def build_html_report(
     inline: bool = False,
     flights: pd.DataFrame | None = None,
     weight: str | None = None,
+    periods: list[str] | None = None,
 ) -> Path:
-    """Write a self-contained bokeh HTML report built from the ranking CSVs."""
+    """Write a self-contained bokeh HTML report built from the ranking CSVs.
+
+    ``periods`` restricts the report to those period codes even if the rankings
+    directory holds others.
+    """
     bk = _bokeh()
     loaded = load_rankings(rankings_dir)
+    if periods:
+        wanted = set(periods)
+        loaded = [entry for entry in loaded if entry[0] in wanted]
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 

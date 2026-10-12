@@ -92,7 +92,13 @@ def _report_command(args: argparse.Namespace) -> int:
     flights = pd.concat(frames, ignore_index=True) if frames else None
 
     path = build_html_report(
-        args.rankings, args.html, top_n=args.top_n, inline=args.inline, flights=flights, weight=args.weight
+        args.rankings,
+        args.html,
+        top_n=args.top_n,
+        inline=args.inline,
+        flights=flights,
+        weight=args.weight,
+        periods=periods or None,
     )
     print(f"wrote {path}")
     return 0

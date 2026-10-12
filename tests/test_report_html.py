@@ -79,6 +79,40 @@ def test_missing_bokeh_raises(monkeypatch: pytest.MonkeyPatch, rankings_dir: Pat
         build_html_report(rankings_dir, tmp_path / "report.html")
 
 
+def test_build_html_report_restricts_to_requested_periods(tmp_path: Path) -> None:
+    for period in ("202403", "202404", "202405"):
+        window = f"{period[:4]}-{period[4:]}-01"
+        for method in ("static", "temporal"):
+            _write_rankings(tmp_path, period, "M", method, [window])
+    out = tmp_path / "report.html"
+    build_html_report(tmp_path, out, top_n=4, periods=["202403", "202404"])
+
+    text = out.read_text(encoding="utf-8")
+    assert "Periods: 202403, 202404" in text
+    assert "202405" not in text
+
+
+def test_chart_map_uses_airport_name_lookup() -> None:
+    from airconnectivity.report_html import _bokeh, _chart_map
+
+    fig, _ = _chart_map(
+        _bokeh(), {("202403", "temporal"): {"EGLL": 0.9}}, ["202403"], "temporal", 25, {"EGLL": (51.47, -0.46)}
+    )
+    data = [r for r in fig.renderers if hasattr(r, "data_source") and "name" in r.data_source.data][0].data_source.data
+    assert data["airport"] == ["EGLL"]
+    assert data["name"] == ["London Heathrow"]
+
+
+def test_chart_map_unknown_name_is_blank() -> None:
+    from airconnectivity.report_html import _bokeh, _chart_map
+
+    fig, _ = _chart_map(
+        _bokeh(), {("202403", "temporal"): {"ZZZZ": 0.9}}, ["202403"], "temporal", 25, {"ZZZZ": (0.0, 0.0)}
+    )
+    data = [r for r in fig.renderers if hasattr(r, "data_source") and "name" in r.data_source.data][0].data_source.data
+    assert data["name"] == [""]
+
+
 def test_cli_report_html_from_rankings(rankings_dir: Path, tmp_path: Path) -> None:
     out = tmp_path / "cli.html"
     assert (

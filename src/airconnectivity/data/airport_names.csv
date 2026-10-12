@@ -1,0 +1,151 @@
+# Airport names by ICAO code, for the HTML report hover. City + airport, kept
+# short. Representative reference data (not flight data); unknown codes fall
+# back to an empty name.
+icao,name
+EGLL,London Heathrow
+EGKK,London Gatwick
+EGSS,London Stansted
+EGGW,London Luton
+EGCC,Manchester
+EGPH,Edinburgh
+LFPG,Paris Charles de Gaulle
+LFPO,Paris Orly
+LFLL,Lyon
+LFMN,Nice
+EHAM,Amsterdam Schiphol
+EBBR,Brussels
+EDDF,Frankfurt
+EDDM,Munich
+EDDB,Berlin Brandenburg
+EDDL,Dusseldorf
+EDDK,Cologne Bonn
+LSZH,Zurich
+LSGG,Geneva
+LOWW,Vienna
+LOWI,Innsbruck
+LIRF,Rome Fiumicino
+LIMC,Milan Malpensa
+LIPZ,Venice
+LEMD,Madrid Barajas
+LEBL,Barcelona
+LEPA,Palma de Mallorca
+LEMG,Malaga
+LPPT,Lisbon
+LPPR,Porto
+LTFM,Istanbul
+LTFJ,Istanbul Sabiha Gokcen
+LTAI,Antalya
+LGAV,Athens
+LGIR,Heraklion
+LGRP,Rhodes
+EKCH,Copenhagen
+ENGM,Oslo Gardermoen
+ESSA,Stockholm Arlanda
+EFHK,Helsinki
+EIDW,Dublin
+EINN,Shannon
+EVRA,Riga
+EYVI,Vilnius
+EETN,Tallinn
+EPWA,Warsaw Chopin
+EPKK,Krakow
+LKPR,Prague
+LHBP,Budapest
+LROP,Bucharest
+LBSF,Sofia
+LYBE,Belgrade
+LQSA,Sarajevo
+LDZA,Zagreb
+LJLJ,Ljubljana
+LMML,Malta
+LCLK,Larnaca
+UUDD,Moscow Domodedovo
+UUEE,Moscow Sheremetyevo
+ULLI,St Petersburg
+UKBB,Kyiv Boryspil
+KJFK,New York JFK
+KEWR,Newark
+KLGA,New York LaGuardia
+KBOS,Boston
+KIAD,Washington Dulles
+KDCA,Washington Reagan
+KATL,Atlanta
+KMIA,Miami
+KMCO,Orlando
+KORD,Chicago O'Hare
+KDFW,Dallas Fort Worth
+KIAH,Houston
+KDEN,Denver
+KLAX,Los Angeles
+KSFO,San Francisco
+KSEA,Seattle
+KLAS,Las Vegas
+KPHX,Phoenix
+KMSP,Minneapolis
+KDTW,Detroit
+KCLT,Charlotte
+KPHL,Philadelphia
+KBWI,Baltimore
+KSAN,San Diego
+CYYZ,Toronto
+CYVR,Vancouver
+CYUL,Montreal
+CYYC,Calgary
+MMMX,Mexico City
+MMUN,Cancun
+MRLB,Liberia Costa Rica
+MKJP,Kingston
+MUVR,Varadero
+SEGU,Guayaquil
+SBGR,Sao Paulo Guarulhos
+SAEZ,Buenos Aires
+SCEL,Santiago
+SKBO,Bogota
+SPJC,Lima
+OMDB,Dubai
+OMAA,Abu Dhabi
+OTHH,Doha
+OERK,Riyadh
+OEJN,Jeddah
+HECA,Cairo
+HEGN,Hurghada
+HEBA,Alexandria
+OBBI,Bahrain
+OKBK,Kuwait
+OIIE,Tehran
+VGHS,Dhaka
+VIDP,Delhi
+VABB,Mumbai
+VOMM,Chennai
+VOBL,Bangalore
+VCBI,Colombo
+VTBS,Bangkok
+WSSS,Singapore
+WMKK,Kuala Lumpur
+WIII,Jakarta
+RPLL,Manila
+VVTS,Ho Chi Minh City
+VVNB,Hanoi
+RKSI,Seoul Incheon
+RJTT,Tokyo Haneda
+RJAA,Tokyo Narita
+RJBB,Osaka Kansai
+ZBAA,Beijing Capital
+ZBAD,Beijing Daxing
+ZSPD,Shanghai Pudong
+ZGGG,Guangzhou
+ZUUU,Chengdu
+VHHH,Hong Kong
+RCTP,Taipei
+YSSY,Sydney
+YMML,Melbourne
+YBBN,Brisbane
+YPPH,Perth
+NZAA,Auckland
+FAOR,Johannesburg
+FACT,Cape Town
+HKJK,Nairobi
+DNMM,Lagos
+DAAG,Algiers
+GMMN,Casablanca
+DTTA,Tunis
