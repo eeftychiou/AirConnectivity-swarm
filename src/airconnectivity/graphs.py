@@ -42,6 +42,29 @@ def _window_start(times: pd.Series, freq: str) -> pd.Series:
     return starts.dt.tz_localize("UTC")
 
 
+def window_flights(
+    flights: pd.DataFrame,
+    freq: str = "D",
+    depart_column: str = "off_block_time",
+) -> Iterator[tuple[pd.Timestamp, pd.DataFrame]]:
+    """Yield ``(window_start, sub-DataFrame)`` for each non-empty UTC window.
+
+    A flight belongs to the window of its departure. Windows are chronological.
+    """
+    if freq not in WINDOW_FREQUENCIES:
+        raise ValueError(f"freq must be one of {WINDOW_FREQUENCIES}, got {freq!r}")
+
+    df = flights.copy()
+    if df.empty:
+        return
+    if depart_column not in df.columns:
+        raise KeyError(f"departure column {depart_column!r} not in flights")
+
+    df["_window_start"] = _window_start(df[depart_column], freq)
+    for start, group in df.groupby("_window_start", sort=True):
+        yield start, group.drop(columns=["_window_start"])
+
+
 def windows(
     flights: pd.DataFrame,
     freq: str = "D",
@@ -58,15 +81,7 @@ def windows(
     if freq not in WINDOW_FREQUENCIES:
         raise ValueError(f"freq must be one of {WINDOW_FREQUENCIES}, got {freq!r}")
 
-    df = flights.copy()
-    if df.empty:
-        return
-    if depart_column not in df.columns:
-        raise KeyError(f"departure column {depart_column!r} not in flights")
-
-    df["_window_start"] = _window_start(df[depart_column], freq)
-
-    for start, group in df.groupby("_window_start", sort=True):
+    for start, group in window_flights(flights, freq=freq, depart_column=depart_column):
         edges = aggregate_edges(group, weight=weight, distance_source=distance_source)
         graph = nx.DiGraph()
         for adep, ades, edge_weight in edges[["adep", "ades", WEIGHT_ATTRIBUTE]].itertuples(index=False):

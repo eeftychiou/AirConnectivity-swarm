@@ -1,7 +1,6 @@
 """Command-line entry point for ``airconn``.
 
-``load`` is implemented (issue #2); ``rank`` and ``report`` are still stubs
-that later issues fill in.
+Implements the ``load``, ``rank`` and ``report`` subcommands.
 """
 
 from __future__ import annotations
@@ -11,10 +10,9 @@ import logging
 import os
 import sys
 from collections.abc import Sequence
-from pathlib import Path
 
 from . import __version__
-from .config import DEFAULT_MARKET_SEGMENTS, Config
+from .config import DEFAULT_MARKET_SEGMENTS
 
 _ENV_DATA_ROOT = "AIRCONN_DATA_ROOT"
 
@@ -22,6 +20,13 @@ _ENV_DATA_ROOT = "AIRCONN_DATA_ROOT"
 def _default_data_root() -> str:
     """Data root from the environment, or a local ``data`` placeholder."""
     return os.environ.get(_ENV_DATA_ROOT, "data")
+
+
+def _parse_periods(value: str | None) -> list[str]:
+    """Split a ``202403,202404`` argument into period codes."""
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
 
 
 def _load_command(args: argparse.Namespace) -> int:
@@ -44,6 +49,27 @@ def _load_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _rank_command(args: argparse.Namespace) -> int:
+    from .io import discover_periods, load_flights
+    from .report import write_rankings
+
+    periods = _parse_periods(args.periods) or discover_periods(args.data_root)
+    for period in periods:
+        df = load_flights(args.data_root, periods=[period])
+        for path in write_rankings(
+            df, args.out, period, freq=args.window, weight=args.weight, method=args.method
+        ):
+            print(f"wrote {path}")
+    return 0
+
+
+def _report_command(args: argparse.Namespace) -> int:
+    from .report import build_report
+
+    print(f"wrote {build_report(args.rankings, args.out)}")
+    return 0
+
+
 def _add_data_root(parser: argparse.ArgumentParser, default: str) -> None:
     """Register ``--data-root`` on a parser (root or subcommand)."""
     parser.add_argument(
@@ -54,6 +80,9 @@ def _add_data_root(parser: argparse.ArgumentParser, default: str) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from .graphs import WINDOW_FREQUENCIES
+    from .weights import WEIGHT_MODES
+
     parser = argparse.ArgumentParser(
         prog="airconn",
         description="Pagerank air connectivity indicator and optimizer.",
@@ -84,36 +113,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     load.set_defaults(func=_load_command)
 
-    rank = subparsers.add_parser("rank", help="rank airports for one or more periods")
+    rank = subparsers.add_parser("rank", help="write per-period airport rankings as CSV")
     _add_data_root(rank, argparse.SUPPRESS)
-    rank.add_argument("--period", action="append", dest="periods", help="period folder; repeatable")
-    rank.set_defaults(func=_cmd_rank)
+    rank.add_argument("--periods", help="comma-separated periods, e.g. 202403,202404")
+    rank.add_argument("--window", choices=list(WINDOW_FREQUENCIES), default="M", help="window frequency")
+    rank.add_argument("--weight", choices=list(WEIGHT_MODES), default="seats", help="edge weight scheme")
+    rank.add_argument(
+        "--method", choices=["static", "temporal", "both"], default="both", help="PageRank method"
+    )
+    rank.add_argument("--out", default="outputs", help="output directory for the CSV files")
+    rank.set_defaults(func=_rank_command)
 
-    report = subparsers.add_parser("report", help="compare airport rankings across periods")
-    _add_data_root(report, argparse.SUPPRESS)
-    report.add_argument("--period", action="append", dest="periods", help="period folder; repeatable")
-    report.set_defaults(func=_cmd_report)
+    report = subparsers.add_parser("report", help="build the Markdown month-comparison report")
+    report.add_argument("--rankings", default="outputs", help="directory of rankings_*.csv files")
+    report.add_argument("--out", default="outputs/report.md", help="output Markdown report")
+    report.set_defaults(func=_report_command)
 
     return parser
-
-
-def _config(args: argparse.Namespace) -> Config:
-    return Config(data_root=Path(args.data_root))
-
-
-def _not_implemented(command: str) -> int:
-    print(f"airconn {command}: not implemented yet")
-    return 0
-
-
-def _cmd_rank(args: argparse.Namespace) -> int:
-    _ = _config(args)
-    return _not_implemented("rank")
-
-
-def _cmd_report(args: argparse.Namespace) -> int:
-    _ = _config(args)
-    return _not_implemented("report")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
