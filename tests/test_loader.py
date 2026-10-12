@@ -6,6 +6,7 @@ A small synthetic gz fixture is built inside the tests; no real data is used.
 from __future__ import annotations
 
 import gzip
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -114,6 +115,44 @@ def test_load_flights_handles_nested_period_layout(tmp_path: Path) -> None:
 
     assert discover_periods(tmp_path) == ["202403"]
     assert len(load_flights(tmp_path, periods=["202403"])) == 1
+
+
+def test_load_flights_logs_not_classified_count_per_period(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    _write_fixture(
+        tmp_path,
+        "202403",
+        [_row(), _row(market="Not Classified"), _row(market="Not Classified")],
+    )
+
+    with caplog.at_level(logging.INFO, logger="airconnectivity.io"):
+        load_flights(tmp_path, periods=["202403"])
+
+    assert "period 202403" in caplog.text
+    assert "2 Not Classified" in caplog.text
+
+
+def test_market_segments_override_excludes_not_classified(tmp_path: Path) -> None:
+    _write_fixture(tmp_path, "202403", [_row(), _row(market="Not Classified")])
+
+    df = load_flights(tmp_path, periods=["202403"], market_segments=["Mainline"])
+
+    assert set(df["statfor_market_segment"]) == {"Mainline"}
+
+
+def test_cli_load_segments_option_filters(
+    data_root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = cli.main(
+        ["--data-root", str(data_root), "load", "--period", "202403", "--segments", "Mainline", "--summary"]
+    )
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "rows: 8" in out
+    assert "Mainline: 8" in out
+    assert "Low-Cost" not in out
 
 
 def test_discover_periods_lists_numeric_folders_and_skips_others(data_root: Path) -> None:

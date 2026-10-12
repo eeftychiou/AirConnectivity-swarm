@@ -13,12 +13,16 @@ Nothing here ever writes data or row-level extracts.
 
 from __future__ import annotations
 
+import logging
 import re
+from collections.abc import Sequence
 from pathlib import Path
 
 import pandas as pd
 
 from .config import DEFAULT_FLIGHT_TYPES, DEFAULT_MARKET_SEGMENTS, Config
+
+logger = logging.getLogger(__name__)
 
 #: Column names of the EUROCONTROL ``Flights_*.csv`` files (header is skipped).
 HEADER: list[str] = [
@@ -211,11 +215,58 @@ def _to_typed_frame(raw: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _apply_filters(
+    df: pd.DataFrame,
+    market_segments: Sequence[str],
+    flight_types: Sequence[str],
+    time_basis: str,
+) -> pd.DataFrame:
+    """Select the basis times and apply the passenger filters."""
+    off_column, arrival_column = TIME_BASES[time_basis]
+    df = df.copy()
+    df["off_block_time"] = df[off_column]
+    df["arrival_time"] = df[arrival_column]
+
+    df = df[df["icao_flight_type"].isin(list(flight_types))]
+    df = df[df["statfor_market_segment"].isin(list(market_segments))]
+    df = df.dropna(subset=["adep", "ades", "off_block_time", "arrival_time"])
+    df = df[df["adep"] != df["ades"]]
+    return df.reset_index(drop=True)
+
+
+def _load_period(
+    root: Path,
+    period: str,
+    market_segments: Sequence[str],
+    flight_types: Sequence[str],
+    time_basis: str,
+    chunksize: int,
+) -> pd.DataFrame:
+    """Load and filter one period, logging its Not Classified retained count."""
+    paths = _period_files(root, period)
+    if paths:
+        raw = pd.concat([_read_period_file(path, chunksize) for path in paths], ignore_index=True)
+    else:
+        raw = pd.DataFrame(columns=HEADER)
+
+    df = _apply_filters(_to_typed_frame(raw), market_segments, flight_types, time_basis)
+
+    not_classified = int((df["statfor_market_segment"] == "Not Classified").sum())
+    logger.info(
+        "period %s: %d flights retained, %d Not Classified (ICAO type %s)",
+        period,
+        len(df),
+        not_classified,
+        "/".join(flight_types),
+    )
+    return df
+
+
 def load_flights(
     root: str | Path,
     periods: list[str] | None = None,
-    market_segments: tuple[str, ...] | list[str] = DEFAULT_MARKET_SEGMENTS,
-    flight_types: tuple[str, ...] | list[str] = DEFAULT_FLIGHT_TYPES,
+    market_segments: Sequence[str] = DEFAULT_MARKET_SEGMENTS,
+    flight_types: Sequence[str] = DEFAULT_FLIGHT_TYPES,
     time_basis: str = "actual",
     chunksize: int = _CHUNK_SIZE,
 ) -> pd.DataFrame:
@@ -232,7 +283,9 @@ def load_flights(
         :func:`discover_periods`.
     market_segments:
         STATFOR market segments to keep. Defaults to the passenger segments
-        Mainline, Regional, Low-Cost and Charter.
+        across both EUROCONTROL labelling eras, plus ``Not Classified`` (see
+        :data:`~airconnectivity.config.DEFAULT_MARKET_SEGMENTS`). Pass a narrower
+        list to exclude ``Not Classified``.
     flight_types:
         ICAO flight types to keep. Defaults to ``("S",)`` (scheduled). Note the
         type filter is applied *in addition to* the segment filter, so Charter
@@ -247,7 +300,8 @@ def load_flights(
     -------
     DataFrame with snake_case columns, UTC datetimes, and ``off_block_time`` /
     ``arrival_time`` selected from ``time_basis``. Rows missing ADEP, ADES or the
-    selected times, and rows with ADEP == ADES, are dropped.
+    selected times, and rows with ADEP == ADES, are dropped. Each period's
+    retained and ``Not Classified`` counts are logged.
     """
     if time_basis not in TIME_BASES:
         raise ValueError(f"time_basis must be one of {sorted(TIME_BASES)}, got {time_basis!r}")
@@ -257,24 +311,14 @@ def load_flights(
         periods = discover_periods(root)
 
     frames = [
-        _read_period_file(path, chunksize)
+        _load_period(root, period, market_segments, flight_types, time_basis, chunksize)
         for period in periods
-        for path in _period_files(root, period)
     ]
-    raw = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=HEADER)
-
-    df = _to_typed_frame(raw)
-
-    off_column, arrival_column = TIME_BASES[time_basis]
-    df["off_block_time"] = df[off_column]
-    df["arrival_time"] = df[arrival_column]
-
-    df = df[df["icao_flight_type"].isin(list(flight_types))]
-    df = df[df["statfor_market_segment"].isin(list(market_segments))]
-    df = df.dropna(subset=["adep", "ades", "off_block_time", "arrival_time"])
-    df = df[df["adep"] != df["ades"]]
-
-    return df.reset_index(drop=True)
+    if not frames:
+        return _apply_filters(
+            _to_typed_frame(pd.DataFrame(columns=HEADER)), market_segments, flight_types, time_basis
+        )
+    return pd.concat(frames, ignore_index=True)
 
 
 def summarise_flights(df: pd.DataFrame) -> dict[str, object]:

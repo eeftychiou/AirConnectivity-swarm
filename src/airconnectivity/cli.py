@@ -7,13 +7,14 @@ that later issues fill in.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
-from .config import Config
+from .config import DEFAULT_MARKET_SEGMENTS, Config
 
 _ENV_DATA_ROOT = "AIRCONN_DATA_ROOT"
 
@@ -27,7 +28,8 @@ def _load_command(args: argparse.Namespace) -> int:
     from .io import load_flights, summarise_flights
 
     periods = args.periods or None
-    df = load_flights(args.data_root, periods=periods)
+    segments = args.segments or DEFAULT_MARKET_SEGMENTS
+    df = load_flights(args.data_root, periods=periods, market_segments=segments)
     summary = summarise_flights(df)
 
     print(f"periods: {', '.join(periods) if periods else '(all discovered)'}")
@@ -72,6 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="period folder, e.g. 202403; repeatable (default: all discovered)",
     )
     load.add_argument("--summary", action="store_true", help="print counts per segment and type")
+    load.add_argument(
+        "--segments",
+        action="append",
+        dest="segments",
+        metavar="SEGMENT",
+        help="STATFOR segment to keep; repeatable. Defaults to the passenger set; "
+        "pass a narrower list (e.g. --segments Mainline) to exclude 'Not Classified'.",
+    )
     load.set_defaults(func=_load_command)
 
     rank = subparsers.add_parser("rank", help="rank airports for one or more periods")
@@ -107,6 +117,7 @@ def _cmd_report(args: argparse.Namespace) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "command", None):
